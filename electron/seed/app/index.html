@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>subzer0</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="wordmark">
+          <span class="glyph" aria-hidden="true"></span>
+          <span>subzer0</span>
+        </div>
+        <button class="textbtn" id="gear" title="Settings">Settings</button>
+      </header>
+
+      <main class="log" id="log" aria-live="polite"></main>
+
+      <footer class="dock">
+        <form class="composer" id="composer">
+          <textarea
+            id="input"
+            rows="1"
+            placeholder="Describe what you want to change…"
+            autofocus
+          ></textarea>
+          <button type="submit" id="send" class="send" title="Send (Enter)" aria-label="Send">
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M7 11.5V2.5M3 6.2 7 2.3l4 3.9"
+              />
+            </svg>
+          </button>
+        </form>
+
+        <div class="meter" id="meter" hidden>
+          <div class="meter-track"><div class="meter-fill" id="meterFill"></div></div>
+          <div class="meter-row">
+            <span id="meterLeft"></span>
+            <span id="meterCost"></span>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <dialog class="sheet" id="settings">
+      <header class="sheet-head">
+        <h2>Settings</h2>
+        <button class="iconbtn" id="close" aria-label="Close">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <path
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              d="m3.5 3.5 7 7m0-7-7 7"
+            />
+          </svg>
+        </button>
+      </header>
+
+      <div class="sheet-body">
+        <section class="group">
+          <div class="group-head">
+            <h3>Model</h3>
+            <span class="note" id="modelNote">free models only</span>
+          </div>
+          <div class="rows" id="models">
+            <p class="empty">Loading…</p>
+          </div>
+        </section>
+
+        <section class="group">
+          <div class="group-head">
+            <h3>Reasoning</h3>
+            <span class="note" id="reasoningNote"></span>
+          </div>
+          <div class="seg" id="variants"></div>
+        </section>
+
+        <section class="group">
+          <div class="group-head">
+            <h3>Appearance</h3>
+          </div>
+          <div class="themes" id="themes"></div>
+        </section>
+
+        <section class="group">
+          <div class="group-head">
+            <h3>Chat</h3>
+          </div>
+          <label class="row">
+            <span>Token counter</span>
+            <input type="checkbox" id="showTokens" />
+          </label>
+          <label class="row">
+            <span>Token budget</span>
+            <input type="number" id="budget" min="1000" step="5000" />
+          </label>
+        </section>
+      </div>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>

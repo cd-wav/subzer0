@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>subzer0 setup</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="frame">
+      <header class="titlebar">
+        <div class="brand">
+          <span class="mark">s0</span>
+          <span>subzer0</span>
+          <span class="version" id="version"></span>
+        </div>
+        <div class="window-buttons">
+          <button id="min" aria-label="Minimize">–</button>
+          <button id="close" aria-label="Close">✕</button>
+        </div>
+      </header>
+
+      <main>
+        <section id="view-install">
+          <h1>Install subzer0</h1>
+          <p class="lede">
+            A self-modifying AI app — you talk to it and it reshapes its own
+            interface. This copies it to your PC and adds shortcuts.
+          </p>
+
+          <div class="field">
+            <span class="label">Install location</span>
+            <div class="path">
+              <code id="path">…</code>
+              <button class="ghost small" id="browse">Change…</button>
+            </div>
+            <span class="note" id="size"></span>
+          </div>
+
+          <ul class="steps" id="steps">
+            <li data-step="prepare"><span class="tick"></span><span>Prepare installation</span></li>
+            <li data-step="runtime"><span class="tick"></span><span>Install runtime</span></li>
+            <li data-step="app"><span class="tick"></span><span>Install app files</span></li>
+            <li data-step="shortcuts"><span class="tick"></span><span>Create shortcuts</span></li>
+          </ul>
+
+          <div class="progress" id="progress" hidden>
+            <div class="bar"><div class="fill" id="fill"></div></div>
+            <div class="meta">
+              <span id="status">Starting…</span>
+              <span id="percent">0%</span>
+            </div>
+          </div>
+
+          <p class="error" id="error" hidden></p>
+
+          <footer>
+            <button class="primary" id="action">Install</button>
+          </footer>
+        </section>
+
+        <section id="view-done" hidden>
+          <div class="check">✓</div>
+          <h1>You're all set</h1>
+          <p class="lede">
+            subzer0 is installed. You can launch it from the desktop or the
+            Start menu whenever you like.
+          </p>
+          <code class="done-path" id="donePath"></code>
+          <footer>
+            <button class="ghost" id="open">Show in folder</button>
+            <button class="primary" id="launch">Launch subzer0</button>
+          </footer>
+        </section>
+      </main>
+    </div>
+
+    <script src="ui.js"></script>
+  </body>
+</html>

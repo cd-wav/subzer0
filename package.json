@@ -1,0 +1,24 @@
+{
+  "name": "subzer0",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An AI app that rewrites itself: talk to a local agent, watch it reshape the interface you are using.",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "electron .",
+    "start": "electron .",
+    "smoke": "node scripts/smoke.mjs",
+    "icon": "node scripts/icon.mjs",
+    "setup": "node scripts/build-setup.mjs",
+    "release": "node scripts/build-setup.mjs --zip",
+    "publish:release": "node scripts/publish.mjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@opencode/client": "^2.1.2"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "resedit": "^3.1.0"
+  }
+}

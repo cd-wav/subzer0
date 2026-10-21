@@ -1,0 +1,7 @@
+{
+  "name": "subzer0-setup",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Installer for subzer0",
+  "main": "main.js"
+}
