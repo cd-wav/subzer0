@@ -118,31 +118,62 @@ async function getSession(sessionID) {
 }
 
 /**
- * Every free, enabled model the local service knows about, flattened to what
- * the app's settings panel needs. "Free" = every cost tier is zero.
+ * Every enabled model the local service knows about, flattened to what the
+ * app's settings panel needs.
+ *
+ * Three plans come back:
+ *   free  — every cost tier is zero
+ *   go    — served through the OpenCode Go provider (subscription)
+ *   paid  — metered per token from the OpenCode balance
+ *
+ * A model that exists in several providers is kept once, preferring the free
+ * entry, then Go (cheapest), then metered.
  */
 async function listModels() {
   const client = await getClient()
   const result = await client.model.list()
   const models = Array.isArray(result) ? result : result?.data ?? []
-  return models
-    .filter((model) => model.enabled !== false)
-    .filter((model) => {
-      const costs = Array.isArray(model.cost) && model.cost.length ? model.cost : [{}]
-      return costs.every((cost) => !cost.input && !cost.output && !cost.cache?.read && !cost.cache?.write)
-    })
-    .map((model) => ({
+
+  const rank = { free: 0, go: 1, paid: 2 }
+  const byID = new Map()
+
+  for (const model of models) {
+    if (model.enabled === false) continue
+
+    const tiers = Array.isArray(model.cost) && model.cost.length ? model.cost : [{}]
+    const free = tiers.every(
+      (cost) => !cost.input && !cost.output && !cost.cache?.read && !cost.cache?.write
+    )
+    const plan = free ? 'free' : model.providerID === 'opencode-go' ? 'go' : 'paid'
+    const price = free
+      ? { input: 0, output: 0 }
+      : {
+          input: Math.min(...tiers.map((tier) => tier.input ?? 0)) || 0,
+          output: Math.min(...tiers.map((tier) => tier.output ?? 0)) || 0,
+        }
+
+    const id = model.modelID ?? model.id
+    const entry = {
       providerID: model.providerID,
-      id: model.modelID ?? model.id,
+      id,
       name: model.name,
       family: model.family ?? null,
+      plan,
+      price,
       context: model.limit?.context ?? 0,
       output: model.limit?.output ?? 0,
       status: model.status ?? 'active',
-      variants: (model.variants ?? []).map((variant) => variant.id).filter((id) => id !== 'default'),
+      variants: (model.variants ?? []).map((variant) => variant.id).filter((v) => v !== 'default'),
       reasoning: Boolean(model.compatibility?.reasoningField) || (model.variants ?? []).length > 0,
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name))
+    }
+
+    const existing = byID.get(id)
+    if (!existing || rank[plan] < rank[existing.plan]) byID.set(id, entry)
+  }
+
+  return [...byID.values()].sort(
+    (a, b) => rank[a.plan] - rank[b.plan] || a.name.localeCompare(b.name)
+  )
 }
 
 /** Switch the live session's model without losing its history. */

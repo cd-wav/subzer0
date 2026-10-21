@@ -11,8 +11,8 @@ These three files **are** the app the user is looking at. Edits appear instantly
 - one centered column (~680px): a small `subzer0` wordmark top-left, settings button top-right
 - message log, user messages right-aligned in a bordered bubble, assistant replies plain
 - composer at the bottom; the token meter below it is **off by default**
-- settings dialog offers: model (free models only), reasoning effort, theme (dark/light),
-  token counter toggle, token budget
+- settings dialog offers: model (free, OpenCode Go, and pay-per-token, grouped and
+  searchable), reasoning effort, theme (dark/light), token counter toggle, token budget
 - render only assistant `text` parts — no reasoning traces or tool logs
 - no headers beyond the topbar, no logo screens, no emoji
 
@@ -56,11 +56,16 @@ window.conv.onSandboxChange(cb)     // files changed on disk
   cost: 0.0012,
   budget: 200000,
   settings: { model: { providerID, id, variant }, theme, showTokens, budget },
+  providers: { go: 'unknown' | 'active' | 'inactive' },
   busy: false
 }
 ```
 
-`models.list()` → `{ providerID, id, name, context, variants: ['low','high','max'] }`.
+`models.list()` → `{ providerID, id, name, plan, price, context, variants }` where
+`plan` is `'free'`, `'go'` (OpenCode Go subscription) or `'paid'` (metered).
+Errors arrive as `{ message, kind }` with `kind` = `'limit'` when the free or Go
+usage limit was hit, `'plan'` when Go is not on the account, `'auth'` when OpenCode
+needs a sign-in. Show the message; offer Settings when it is `limit` or `plan`.
 Tokens used = `input + output + reasoning`; left = `budget - used`.
 History is replayed on every reload — read it from `onUpdate`, never keep chat state.
 

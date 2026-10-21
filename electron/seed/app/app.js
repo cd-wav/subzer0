@@ -21,6 +21,7 @@ const el = {
   sheet: document.getElementById('settings'),
   close: document.getElementById('close'),
   models: document.getElementById('models'),
+  modelSearch: document.getElementById('modelSearch'),
   modelNote: document.getElementById('modelNote'),
   variants: document.getElementById('variants'),
   reasoningNote: document.getElementById('reasoningNote'),
@@ -44,10 +45,16 @@ const DEFAULT_SETTINGS = {
 let settings = structuredClone(DEFAULT_SETTINGS)
 let models = []
 let modelsLoaded = false
+let modelQuery = ''
+/** 'unknown' until a Go model has actually run: there is no plan endpoint. */
+let goStatus = 'unknown'
 let messages = []
 let busy = false
 let pending = null
+/** @type {{ message: string, kind?: string } | null} */
 let error = null
+/** Message count when the error appeared, so a later reply clears it. */
+let errorAt = 0
 
 /* ------------------------------------------------------------------ settings */
 
@@ -76,7 +83,7 @@ async function save(patch) {
       applySettings()
     }
   } catch (cause) {
-    error = String(cause?.message ?? cause)
+    error = { message: String(cause?.message ?? cause) }
     renderMessages()
   }
 }
@@ -91,50 +98,108 @@ function selectedModel() {
 
 /* -------------------------------------------------------------------- models */
 
+const GROUPS = [
+  { plan: 'free', label: 'Free', hint: 'no subscription needed' },
+  { plan: 'go', label: 'OpenCode Go', hint: '' },
+  { plan: 'paid', label: 'Pay per token', hint: 'billed to your OpenCode balance' },
+]
+
+function goHint() {
+  if (goStatus === 'inactive') return 'not active on this account'
+  if (goStatus === 'active') return 'active on this account'
+  return 'included in your subscription'
+}
+
+function modelMeta(model) {
+  if (model.plan === 'paid') {
+    const { input, output } = model.price ?? {}
+    return input || output ? `$${input} / $${output} per M` : 'metered'
+  }
+  return model.context ? `${Math.round(model.context / 1000)}K` : ''
+}
+
+function modelRow(model) {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'model'
+  const active = model.id === settings.model.id && model.providerID === settings.model.providerID
+  button.setAttribute('aria-pressed', String(active))
+
+  const dot = document.createElement('span')
+  dot.className = 'dot'
+
+  const name = document.createElement('span')
+  name.className = 'name'
+  name.textContent = model.name
+
+  const meta = document.createElement('span')
+  meta.className = 'meta'
+  meta.textContent = modelMeta(model)
+
+  button.append(dot, name, meta)
+  button.addEventListener('click', () => {
+    const keep =
+      settings.model.variant === 'default' || model.variants.includes(settings.model.variant)
+    void save({
+      model: {
+        providerID: model.providerID,
+        id: model.id,
+        variant: keep ? settings.model.variant : 'default',
+      },
+    })
+  })
+  return button
+}
+
 function renderModels() {
   if (!models.length) {
     el.models.innerHTML = `<p class="empty">${
-      modelsLoaded ? 'No free models available.' : 'Loading…'
+      modelsLoaded ? 'No models available.' : 'Loading…'
     }</p>`
+    el.modelNote.textContent = ''
     return
   }
 
+  const query = modelQuery.trim().toLowerCase()
+  const visible = models.filter(
+    (model) =>
+      !query ||
+      model.name.toLowerCase().includes(query) ||
+      model.id.toLowerCase().includes(query)
+  )
+
   const frag = document.createDocumentFragment()
-  for (const model of models) {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.className = 'model'
-    const active =
-      model.id === settings.model.id && model.providerID === settings.model.providerID
-    button.setAttribute('aria-pressed', String(active))
 
-    const dot = document.createElement('span')
-    dot.className = 'dot'
+  for (const group of GROUPS) {
+    const items = visible.filter((model) => model.plan === group.plan)
+    if (!items.length) continue
 
-    const name = document.createElement('span')
-    name.className = 'name'
-    name.textContent = model.name
+    const head = document.createElement('div')
+    head.className = 'model-group'
+    head.dataset.plan = group.plan
 
-    const meta = document.createElement('span')
-    meta.className = 'meta'
-    meta.textContent = model.context ? `${Math.round(model.context / 1000)}K` : ''
+    const label = document.createElement('span')
+    label.textContent = group.label
 
-    button.append(dot, name, meta)
-    button.addEventListener('click', () => {
-      const keep =
-        settings.model.variant === 'default' || model.variants.includes(settings.model.variant)
-      void save({
-        model: {
-          providerID: model.providerID,
-          id: model.id,
-          variant: keep ? settings.model.variant : 'default',
-        },
-      })
-    })
-    frag.appendChild(button)
+    const hint = document.createElement('span')
+    hint.className = 'model-group-hint'
+    hint.textContent = group.plan === 'go' ? goHint() : group.hint
+
+    head.append(label, hint)
+    frag.appendChild(head)
+
+    for (const model of items) frag.appendChild(modelRow(model))
+  }
+
+  if (!frag.childNodes.length) {
+    const empty = document.createElement('p')
+    empty.className = 'empty'
+    empty.textContent = `No model matches “${modelQuery.trim()}”.`
+    frag.appendChild(empty)
   }
 
   el.models.replaceChildren(frag)
+  el.modelNote.textContent = `${visible.length} of ${models.length}`
 }
 
 /* ------------------------------------------------------------------ variants */
@@ -291,7 +356,21 @@ function renderMessages() {
   if (error) {
     const line = document.createElement('div')
     line.className = 'error'
-    line.textContent = error
+
+    const text = document.createElement('span')
+    text.textContent = error.message ?? String(error)
+    line.appendChild(text)
+
+    // Limits and plan problems are fixable in Settings, so offer the door.
+    if (error.kind === 'limit' || error.kind === 'plan') {
+      const action = document.createElement('button')
+      action.type = 'button'
+      action.className = 'err-action'
+      action.textContent = 'Choose a model'
+      action.addEventListener('click', () => void openSheet())
+      line.appendChild(action)
+    }
+
     el.log.appendChild(line)
   }
 
@@ -317,6 +396,7 @@ async function submit() {
   if (!text || busy) return
 
   error = null
+  errorAt = 0
   pending = text
   el.input.value = ''
   autosize()
@@ -328,16 +408,18 @@ async function submit() {
     const result = await window.conv.send(text)
     // Standalone exports have no AI behind the bridge; don't hang on "working".
     if (result && result.ok === false) {
-      error = result.reason
-        ? `This copy has no AI attached (${result.reason}).`
-        : 'This copy has no AI attached.'
+      error = {
+        message: result.reason
+          ? `This copy has no AI attached (${result.reason}).`
+          : 'This copy has no AI attached.',
+      }
       busy = false
       pending = null
       el.send.disabled = false
       renderMessages()
     }
   } catch (cause) {
-    error = String(cause?.message ?? cause)
+    error = { message: String(cause?.message ?? cause) }
     busy = false
     pending = null
     el.send.disabled = false
@@ -382,11 +464,23 @@ el.budget.addEventListener('change', () => {
   if (Number.isFinite(value) && value > 0) void save({ budget: value })
 })
 
+el.modelSearch.addEventListener('input', () => {
+  modelQuery = el.modelSearch.value
+  renderModels()
+})
+
 window.conv.onUpdate((update) => {
   messages = update.messages ?? []
   busy = Boolean(update.busy)
   pending = null
   if (update.settings) settings = update.settings
+  if (update.providers?.go) goStatus = update.providers.go
+
+  // A reply that landed after the error means the next turn worked; drop it.
+  if (error && messages.length > errorAt) {
+    error = null
+    errorAt = 0
+  }
 
   el.send.disabled = busy
   applySettings()
@@ -399,8 +493,9 @@ window.conv.onSettings((next) => {
   applySettings()
 })
 
-window.conv.onError(({ message }) => {
-  error = message
+window.conv.onError((payload) => {
+  error = { message: payload?.message ?? String(payload), kind: payload?.kind }
+  errorAt = messages.length
   renderMessages()
 })
 

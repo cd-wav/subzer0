@@ -246,11 +246,31 @@ body {
 
 .error {
   align-self: stretch;
+  display: flex;
+  flex-direction: column;
   padding: 9px 12px;
   border: 1px solid color-mix(in srgb, #ff5c5c 35%, transparent);
   border-radius: 9px;
   color: #ff8080;
   font-size: 12.5px;
+}
+
+.err-action {
+  align-self: flex-start;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in srgb, #ff5c5c 40%, transparent);
+  border-radius: 7px;
+  background: transparent;
+  color: #ff8080;
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.err-action:hover {
+  background: color-mix(in srgb, #ff5c5c 12%, transparent);
 }
 
 /* --------------------------------------------------------------------- dock */
@@ -444,6 +464,56 @@ textarea::placeholder {
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
+}
+
+.search {
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--fg);
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.search:focus {
+  border-color: var(--accent);
+}
+
+.search::placeholder {
+  color: var(--muted);
+}
+
+.model-group {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 9px 5px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.model-group-hint {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.model[aria-pressed='true'] .name {
+  font-weight: 500;
 }
 
 .model {

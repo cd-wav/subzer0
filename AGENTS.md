@@ -103,8 +103,15 @@ $env:CONV_DEBUG_PORT="9222"; npm run dev
   and survive reloads, restarts and app rewrites. There are exactly **two
   themes**: `dark` and `light`.
 - Switching model or reasoning calls `client.session.switchModel({ sessionID,
-  model })`, which keeps the conversation history. Free models are the ones whose
-  every cost tier is zero; `models:list` filters them host-side and caches 10s.
+  model })`, which keeps the conversation history. `models:list` returns all
+  enabled models with a `plan` of `free` (every cost tier zero), `go`
+  (`opencode-go` provider, subscription) or `paid` (metered), deduplicated by
+  model id and cached 10s. There is no subscription endpoint, so Go status
+  flips to `active`/`inactive` only after a Go model actually runs.
+- Errors are translated by `electron/errors.js` (`explainError`) into
+  `{ kind: 'limit' | 'plan' | 'auth' | 'error', message }`. The app shows the
+  message and offers Settings on `limit`/`plan`. Keep that mapping in sync with
+  the seed app, which relies on `kind`.
 - Tokens are expensive: `electron/seed/AGENTS.md` is deliberately short, and
   `maybeCompact()` calls `session.compact` before a prompt once the conversation
   is estimated past ~60k tokens. Keep both.

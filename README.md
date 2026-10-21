@@ -9,7 +9,8 @@ the interface is fair game, because the interface is just three files the AI can
 rewrite.
 
 No API keys. No model downloads. It drives [OpenCode](https://opencode.ai), the
-coding agent on your machine, and picks up every **free** model it can see.
+coding agent on your machine, and picks up every model it can see — the free ones,
+your **OpenCode Go** models, and metered models billed to your balance.
 DeepSeek V4.1 Flash is the default, with its reasoning effort (`low` / `high` /
 `max`) selectable. Dark or light theme, a token budget, and the token counter are
 all in Settings, and everything persists.
@@ -89,7 +90,8 @@ ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ node node_modules/electr
 falls back to the user's configured default if that model is missing. Settings
 talk to the host through `window.conv`:
 
-- **Model** — every free model the local service reports, with context size
+- **Model** — grouped and searchable: free, OpenCode Go, and pay-per-token, with
+  context size or price
 - **Reasoning** — the model's effort variants (`auto` / `low` / `high` / …)
 - **Theme** — dark or light
 - **Chat** — token counter on/off (off by default), token budget
@@ -134,7 +136,7 @@ file does not appear. Prints the model and token usage it observed.
 | AI edits the app you are looking at | working |
 | Live reload after edits | working |
 | Your messages + assistant messages rendered | working |
-| Settings: model + reasoning, 10 free models | working |
+| Settings: model (free / Go / metered) + reasoning, 56 models | working |
 | Dark + light themes, persisted | working |
 | Token counter (off by default) + budget | working |
 | Auto-compaction when the context grows | working |

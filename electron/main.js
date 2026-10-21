@@ -5,6 +5,7 @@ const path = require('node:path')
 const fs = require('node:fs')
 const fsp = require('node:fs/promises')
 const oc = require('./opencode')
+const { explainError } = require('./errors')
 const { exportApp } = require('./export')
 const { ROOT, APP_DIR, SETTINGS, ensureSandbox, resetApp } = require('./sandbox')
 
@@ -26,6 +27,26 @@ let refreshTimer = null
 let watcher = null
 let reloadTimer = null
 let modelsCache = { at: 0, models: [] }
+
+/**
+ * Whether OpenCode Go works on this account. Unknown until a Go model actually
+ * runs: there is no subscription endpoint, so success/failure is the signal.
+ * @type {'unknown' | 'active' | 'inactive'}
+ */
+let goStatus = 'unknown'
+
+function currentModel() {
+  const cached = modelsCache.models.find(
+    (model) => model.id === settings.model.id && model.providerID === settings.model.providerID
+  )
+  if (cached) return cached
+  const plan = settings.model.providerID === 'opencode-go'
+    ? 'go'
+    : /-free$/.test(settings.model.id)
+      ? 'free'
+      : 'paid'
+  return { providerID: settings.model.providerID, id: settings.model.id, name: settings.model.id, plan }
+}
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -190,6 +211,7 @@ async function pushState() {
       settings,
       busy: running,
       sessionID,
+      providers: { go: goStatus },
     })
   } catch (error) {
     send('app:error', { message: String(error && error.message ? error.message : error) })
@@ -223,6 +245,20 @@ async function startEventStream() {
         return
       }
 
+      if (event.type === 'session.execution.failed') {
+        const model = currentModel()
+        const explained = explainError(event.data?.error, { model })
+        if (model.plan === 'go') goStatus = explained.kind === 'plan' ? 'inactive' : 'active'
+        running = false
+        send('app:error', explained)
+        scheduleRefresh(0)
+        return
+      }
+
+      if (event.type === 'session.execution.succeeded') {
+        if (currentModel().plan === 'go') goStatus = 'active'
+      }
+
       if (TERMINAL_EVENTS.has(event.type)) {
         running = false
         scheduleRefresh(0)
@@ -248,16 +284,30 @@ function modelRef({ providerID, id, variant }) {
   return ref
 }
 
+/** True only when the server says the session really no longer exists. */
+function sessionGone(error) {
+  const text = `${error?.status ?? ''} ${error?.message ?? error ?? ''}`
+  return /404|not found|does not exist|no such session|unknown session/i.test(text)
+}
+
 async function ensureSession() {
   if (sessionID) {
-    // A stored session can disappear (OpenCode reset, service change); only
-    // trust it if the server still knows about it.
-    try {
-      await oc.getSession(sessionID)
-      return sessionID
-    } catch {
-      sessionID = null
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await oc.getSession(sessionID)
+        return sessionID
+      } catch (error) {
+        if (sessionGone(error)) {
+          sessionID = null
+          break
+        }
+        // Service hiccup (reload during a turn, model switch in flight, …).
+        await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)))
+      }
     }
+    // Never trade a transient error for a new session: that would wipe the
+    // user's history silently. Keep the id and let a real failure surface.
+    if (sessionID) return sessionID
   }
   try {
     const created = await oc.createSession({
@@ -316,10 +366,15 @@ async function applyModel() {
   if (!sessionID) return true
   try {
     await oc.switchModel(sessionID, modelRef(settings.model))
+    if (settings.model.providerID === 'opencode-go' && goStatus === 'inactive') goStatus = 'unknown'
     return true
   } catch (error) {
+    const model = currentModel()
+    const explained = explainError(error, { model })
+    if (model.plan === 'go' && explained.kind === 'plan') goStatus = 'inactive'
     send('app:error', {
-      message: `Could not switch model: ${error && error.message ? error.message : error}`,
+      kind: explained.kind,
+      message: `Could not switch model. ${explained.message}`,
     })
     return false
   }
@@ -418,7 +473,12 @@ ipcMain.handle('chat:send', async (_event, text) => {
   await ensureSession()
   await maybeCompact()
   running = true
-  await oc.prompt(sessionID, trimmed)
+  try {
+    await oc.prompt(sessionID, trimmed)
+  } catch (error) {
+    running = false
+    send('app:error', explainError(error, { model: currentModel() }))
+  }
   await pushState()
   return { ok: true }
 })
