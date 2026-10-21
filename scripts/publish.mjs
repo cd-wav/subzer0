@@ -15,6 +15,14 @@ import { promisify } from 'node:util'
 const run = promisify(execFile)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
+const NOTES = (tag) => [
+  `Windows installer for subzer0 ${tag}.`,
+  '',
+  '- Unzip, run "subzer0 Setup.exe", then launch subzer0 from the Start menu.',
+  '- If OpenCode is not running, the app starts its own background service.',
+  '- No API keys: it uses the free models your local OpenCode already has.',
+].join('\n')
+
 async function main() {
   const dryRun = process.argv.includes('--dry-run')
   const pkg = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'))
@@ -28,16 +36,7 @@ async function main() {
     stdio: 'inherit',
   })
 
-  const args = [
-    'release',
-    'create',
-    tag,
-    zip,
-    '--title',
-    `subzer0 ${tag}`,
-    '--notes',
-    `Windows installer for subzer0 ${tag}. Unzip, run "subzer0 Setup.exe", then launch subzer0 from the Start menu.`,
-  ]
+  const args = ['release', 'create', tag, zip, '--title', `subzer0 ${tag}`, '--notes', NOTES(tag)]
 
   if (dryRun) {
     console.log('\n· dry run, would execute:\n  gh ' + args.join(' '))
@@ -47,12 +46,12 @@ async function main() {
   console.log(`· publishing ${tag}`)
   try {
     await run('gh', args, { cwd: ROOT, stdio: 'inherit' })
-    console.log(`✓ released ${tag}`)
+    console.log(`· released ${tag}`)
   } catch (error) {
     if (String(error.stderr || '').includes('already exists')) {
       console.log(`· ${tag} already exists — uploading the asset instead`)
       await run('gh', ['release', 'upload', tag, zip, '--clobber'], { cwd: ROOT, stdio: 'inherit' })
-      console.log(`✓ updated ${tag}`)
+      console.log(`· updated ${tag}`)
     } else {
       throw error
     }
