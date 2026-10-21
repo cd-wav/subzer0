@@ -493,16 +493,37 @@ ipcMain.handle('budget:set', async (_event, value) => {
 
 /* --------------------------------------------------------------------- boot */
 
-app.whenReady().then(async () => {
-  registerPreviewProtocol()
-  await ensureSandbox()
-  watchAppDir()
-  startEventStream()
-  createWindow()
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+// Keep dev and installed builds out of each other's caches. Without this the
+// two share %APPDATA%\subzer0 and Chromium fails to take the cache lock.
+if (!app.isPackaged) {
+  app.setPath('userData', path.join(app.getPath('appData'), 'subzer0-dev'))
+}
+
+// One window per machine: launching again focuses the window that is already
+// open instead of starting a second instance.
+const primary = app.requestSingleInstanceLock()
+
+if (!primary) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (!win) return
+    if (win.isMinimized()) win.restore()
+    win.show()
+    win.focus()
   })
-})
+
+  app.whenReady().then(async () => {
+    registerPreviewProtocol()
+    await ensureSandbox()
+    watchAppDir()
+    startEventStream()
+    createWindow()
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
+  })
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()

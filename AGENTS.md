@@ -82,6 +82,10 @@ $env:CONV_DEBUG_PORT="9222"; npm run dev
 
 - The window loads `preview://app/index.html` from `sandbox/app`. Reload after
   edits is debounced 500ms in `watchAppDir`/`queueReload`.
+- Only one instance runs at a time: `app.requestSingleInstanceLock()` focuses the
+  existing window on a second launch. Dev builds use a separate `userData` folder
+  (`%APPDATA%\subzer0-dev`) so they never fight the installed build over the
+  Chromium cache.
 - `window.conv` is the fixed contract between app and host. The AI may rewrite
   everything else, and `electron/seed/AGENTS.md` forbids breaking it.
 - The reset button lives in a shadow root injected by the preload so app CSS
