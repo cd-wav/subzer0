@@ -117,6 +117,31 @@ async function getSession(sessionID) {
   return client.session.get({ sessionID })
 }
 
+/** Give a conversation a real name; the first message is the best title. */
+async function renameSession(sessionID, title) {
+  const client = await getClient()
+  return client.session.update({ sessionID, title })
+}
+
+/** Recent conversations in this folder, newest first. */
+async function listSessions(directory, limit = 30) {
+  const client = await getClient()
+  const result = await client.session.list({
+    location: { directory },
+    limit,
+    order: 'desc',
+  })
+  const data = Array.isArray(result) ? result : result?.data ?? []
+  return data.map((session) => ({
+    id: session.id,
+    // Sessions we create are titled "subzer0" until their first message.
+    title: !session.title || session.title === 'subzer0' ? 'New chat' : session.title,
+    created: session.time?.created ?? 0,
+    updated: session.time?.updated ?? session.time?.created ?? 0,
+    cost: session.cost ?? 0,
+  }))
+}
+
 /**
  * Every enabled model the local service knows about, flattened to what the
  * app's settings panel needs.
@@ -230,6 +255,8 @@ module.exports = {
   listModels,
   createSession,
   getSession,
+  listSessions,
+  renameSession,
   switchModel,
   compactSession,
   listMessages,

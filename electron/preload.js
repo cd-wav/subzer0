@@ -50,9 +50,15 @@ contextBridge.exposeInMainWorld('conv', {
   },
   send: (text) => ipcRenderer.invoke('chat:send', text),
   stop: () => ipcRenderer.invoke('chat:stop'),
+  newChat: () => ipcRenderer.invoke('chat:new'),
   reset: () => ipcRenderer.invoke('chat:reset'),
   exportApp: () => ipcRenderer.invoke('build:export'),
   setBudget: (value) => ipcRenderer.invoke('budget:set', value),
+
+  sessions: {
+    list: () => ipcRenderer.invoke('sessions:list'),
+    open: (id) => ipcRenderer.invoke('sessions:open', id),
+  },
 
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
@@ -70,6 +76,10 @@ contextBridge.exposeInMainWorld('conv', {
   onUpdate: (callback) => {
     markClaimed()
     ipcRenderer.on('app:update', (_event, payload) => callback(payload))
+  },
+  onSessions: (callback) => {
+    markClaimed()
+    ipcRenderer.on('app:sessions', (_event, payload) => callback(payload))
   },
   onError: (callback) => {
     ipcRenderer.on('app:error', (_event, payload) => callback(payload))

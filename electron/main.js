@@ -14,9 +14,16 @@ const DEFAULT_MODEL = { providerID: 'opencode', id: 'deepseek-v4.1-flash-free', 
 const DEFAULT_SETTINGS = {
   model: DEFAULT_MODEL,
   theme: 'dark',
-  showTokens: false,
+  accent: 'indigo',
+  density: 'comfortable',
+  fontSize: 'medium',
+  showTokens: true,
   budget: 200_000,
 }
+
+const ACCENTS = ['indigo', 'emerald', 'amber', 'rose', 'violet', 'slate']
+const DENSITIES = ['comfortable', 'compact']
+const FONT_SIZES = ['small', 'medium', 'large']
 
 /** @type {BrowserWindow | null} */
 let win = null
@@ -225,6 +232,15 @@ const TERMINAL_EVENTS = new Set([
   'session.idle',
 ])
 
+/** Push the conversation list to the app (sidebar). */
+async function pushSessions() {
+  try {
+    send('app:sessions', { sessions: await oc.listSessions(APP_DIR), current: sessionID })
+  } catch {
+    /* the list is a convenience, never a hard dependency */
+  }
+}
+
 function sessionIdOf(event) {
   return event?.data?.sessionID ?? event?.data?.session?.id ?? null
 }
@@ -262,6 +278,7 @@ async function startEventStream() {
       if (TERMINAL_EVENTS.has(event.type)) {
         running = false
         scheduleRefresh(0)
+        void pushSessions()
         return
       }
 
@@ -386,6 +403,7 @@ function sanitizeSettings(value) {
   const budget = Number(source.budget)
   const text = (input, fallback) =>
     typeof input === 'string' && input.length ? input : fallback
+  const pick = (input, allowed, fallback) => (allowed.includes(input) ? input : fallback)
 
   return {
     model: {
@@ -393,8 +411,11 @@ function sanitizeSettings(value) {
       id: text(model.id, DEFAULT_MODEL.id),
       variant: text(model.variant, 'default'),
     },
-    theme: text(source.theme, DEFAULT_SETTINGS.theme),
-    showTokens: source.showTokens === true,
+    theme: pick(source.theme, ['dark', 'light'], DEFAULT_SETTINGS.theme),
+    accent: pick(source.accent, ACCENTS, DEFAULT_SETTINGS.accent),
+    density: pick(source.density, DENSITIES, DEFAULT_SETTINGS.density),
+    fontSize: pick(source.fontSize, FONT_SIZES, DEFAULT_SETTINGS.fontSize),
+    showTokens: typeof source.showTokens === 'boolean' ? source.showTokens : DEFAULT_SETTINGS.showTokens,
     budget: Number.isFinite(budget) && budget > 0 ? Math.round(budget) : DEFAULT_SETTINGS.budget,
   }
 }
@@ -427,7 +448,8 @@ ipcMain.handle('app:init', async () => {
     oc.defaultModel(APP_DIR).catch(() => null),
   ])
   await pushState()
-  return { sessionID, settings, model, server: info, cli: oc.findCli() }
+  const sessions = await oc.listSessions(APP_DIR).catch(() => [])
+  return { sessionID, settings, model, server: info, cli: oc.findCli(), sessions }
 })
 
 ipcMain.handle('settings:get', () => settings)
@@ -453,6 +475,45 @@ ipcMain.handle('settings:set', async (_event, patch) => {
   return settings
 })
 
+ipcMain.handle('sessions:list', async () => {
+  try {
+    return await oc.listSessions(APP_DIR)
+  } catch (error) {
+    send('app:error', explainError(error))
+    return []
+  }
+})
+
+ipcMain.handle('sessions:open', async (_event, id) => {
+  if (typeof id !== 'string' || !id.startsWith('ses') || id === sessionID) {
+    return { ok: id === sessionID }
+  }
+  try {
+    await oc.getSession(id)
+  } catch (error) {
+    send('app:error', explainError(error))
+    return { ok: false }
+  }
+  if (running) await oc.interrupt(sessionID).catch(() => {})
+  running = false
+  sessionID = id
+  await saveSettings()
+  await applyModel()
+  await pushState()
+  await pushSessions()
+  return { ok: true }
+})
+
+ipcMain.handle('chat:new', async () => {
+  if (running) await oc.interrupt(sessionID).catch(() => {})
+  running = false
+  sessionID = null
+  await ensureSession()
+  await pushState()
+  await pushSessions()
+  return { ok: true, sessionID }
+})
+
 ipcMain.handle('models:list', async () => {
   if (Date.now() - modelsCache.at < 10_000) return modelsCache.models
   try {
@@ -467,11 +528,26 @@ ipcMain.handle('models:list', async () => {
   }
 })
 
+/** Name the conversation after its first message so the sidebar is readable. */
+async function titleSession(text) {
+  if (!sessionID) return
+  try {
+    const history = await oc.listMessages(sessionID)
+    const alreadyAsked = (history ?? []).some((message) => message.type === 'user')
+    if (alreadyAsked) return
+    await oc.renameSession(sessionID, text.slice(0, 48))
+    void pushSessions()
+  } catch {
+    /* cosmetic only */
+  }
+}
+
 ipcMain.handle('chat:send', async (_event, text) => {
   const trimmed = typeof text === 'string' ? text.trim() : ''
   if (!trimmed) return { ok: false }
   await ensureSession()
   await maybeCompact()
+  await titleSession(trimmed)
   running = true
   try {
     await oc.prompt(sessionID, trimmed)

@@ -1,12 +1,14 @@
 // subzer0 — the app. Everything here is yours to rewrite.
 //
 // The only fixed contract is `window.conv` (see electron/preload.js):
-//   send(text), stop(), reset(), exportApp(),
+//   send(text), stop(), newChat(), reset(), exportApp(),
 //   settings.get(), settings.set(patch),
 //   models.list(), models.select(model),
-//   onUpdate(cb), onError(cb), onSettings(cb), onSandboxChange(cb)
+//   sessions.list(), sessions.open(id),
+//   onUpdate(cb), onError(cb), onSettings(cb), onSessions(cb), onSandboxChange(cb)
 //
-// onUpdate payload: { messages, tokens, cost, budget, settings, busy }
+// onUpdate payload:
+//   { messages, tokens, cost, budget, settings, providers, busy }
 
 const el = {
   log: document.getElementById('log'),
@@ -17,6 +19,16 @@ const el = {
   meterFill: document.getElementById('meterFill'),
   meterLeft: document.getElementById('meterLeft'),
   meterCost: document.getElementById('meterCost'),
+  meterLocked: document.getElementById('meterLocked'),
+  tokensLabel: document.getElementById('tokensLabel'),
+  stopBtn: document.getElementById('stopBtn'),
+  sessionTitle: document.getElementById('sessionTitle'),
+  newChat: document.getElementById('newChat'),
+  sessions: document.getElementById('sessions'),
+  modelChip: document.getElementById('modelChip'),
+  modelChipName: document.getElementById('modelChipName'),
+  modelChipPlan: document.getElementById('modelChipPlan'),
+  modelDot: document.getElementById('modelDot'),
   gear: document.getElementById('gear'),
   sheet: document.getElementById('settings'),
   close: document.getElementById('close'),
@@ -26,19 +38,51 @@ const el = {
   variants: document.getElementById('variants'),
   reasoningNote: document.getElementById('reasoningNote'),
   themes: document.getElementById('themes'),
+  accents: document.getElementById('accents'),
+  densities: document.getElementById('densities'),
+  fontSizes: document.getElementById('fontSizes'),
   showTokens: document.getElementById('showTokens'),
   budget: document.getElementById('budget'),
 }
 
 const THEMES = [
-  { id: 'dark', name: 'Dark', bg: '#09090b', line: '#1d1d21', accent: '#6d77ff' },
-  { id: 'light', name: 'Light', bg: '#fbfbfc', line: '#e5e5ea', accent: '#4b55e6' },
+  { id: 'dark', name: 'Dark', bg: '#0a0a0c', line: '#1e1e24', accent: '#6d77ff' },
+  { id: 'light', name: 'Light', bg: '#fbfbfc', line: '#e4e4ea', accent: '#4b55e6' },
+]
+
+const ACCENTS = [
+  { id: 'indigo', color: '#6d77ff', light: '#4b55e6' },
+  { id: 'emerald', color: '#2fbf8f', light: '#128a63' },
+  { id: 'amber', color: '#dba63c', light: '#a7741c' },
+  { id: 'rose', color: '#e05a72', light: '#c23a55' },
+  { id: 'violet', color: '#a06bff', light: '#7c46d8' },
+  { id: 'slate', color: '#8f96a3', light: '#5d646f' },
+]
+
+const DENSITIES = [
+  { id: 'comfortable', name: 'Cozy' },
+  { id: 'compact', name: 'Compact' },
+]
+
+const FONT_SIZES = [
+  { id: 'small', name: 'S' },
+  { id: 'medium', name: 'M' },
+  { id: 'large', name: 'L' },
+]
+
+const HINTS = [
+  'Give this a sidebar with folders',
+  'Make it feel like a terminal',
+  'Add a notes panel on the right',
 ]
 
 const DEFAULT_SETTINGS = {
   model: { providerID: 'opencode', id: 'deepseek-v4.1-flash-free', variant: 'default' },
   theme: 'dark',
-  showTokens: false,
+  accent: 'indigo',
+  density: 'comfortable',
+  fontSize: 'medium',
+  showTokens: true,
   budget: 200000,
 }
 
@@ -48,7 +92,11 @@ let modelsLoaded = false
 let modelQuery = ''
 /** 'unknown' until a Go model has actually run: there is no plan endpoint. */
 let goStatus = 'unknown'
+let sessions = []
+let sessionID = null
 let messages = []
+let lastTokens = null
+let lastCost = 0
 let busy = false
 let pending = null
 /** @type {{ message: string, kind?: string } | null} */
@@ -58,14 +106,40 @@ let errorAt = 0
 
 /* ------------------------------------------------------------------ settings */
 
+function activeAccent() {
+  const accent = ACCENTS.find((entry) => entry.id === settings.accent) ?? ACCENTS[0]
+  return settings.theme === 'light' ? accent.light : accent.color
+}
+
 function applySettings() {
-  document.documentElement.dataset.theme = settings.theme
+  const root = document.documentElement
+  root.dataset.theme = settings.theme
+  root.dataset.density = settings.density
+  root.dataset.size = settings.fontSize
+  root.style.setProperty('--accent', activeAccent())
+
   el.meter.hidden = !settings.showTokens
   el.showTokens.checked = Boolean(settings.showTokens)
   el.budget.value = String(settings.budget)
+
+  const model = selectedModel()
+  el.modelChipName.textContent = model?.name ?? settings.model.id
+  el.modelChipPlan.textContent = model
+    ? model.plan === 'go'
+      ? 'Go'
+      : model.plan === 'paid'
+        ? 'Paid'
+        : 'Free'
+    : ''
+  el.modelDot.dataset.plan = model?.plan ?? 'free'
+
   renderModels()
   renderVariants()
   renderThemes()
+  renderAccents()
+  renderSegments(el.densities, DENSITIES, settings.density, (id) => save({ density: id }))
+  renderSegments(el.fontSizes, FONT_SIZES, settings.fontSize, (id) => save({ fontSize: id }))
+  renderSessions()
 }
 
 async function save(patch) {
@@ -94,6 +168,58 @@ function selectedModel() {
       (model) => model.id === settings.model.id && model.providerID === settings.model.providerID
     ) ?? null
   )
+}
+
+/* ------------------------------------------------------------------ sessions */
+
+function timeAgo(stamp) {
+  if (!stamp) return ''
+  const seconds = Math.max(0, Math.round((Date.now() - stamp) / 1000))
+  if (seconds < 60) return 'now'
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`
+  if (seconds < 86400) return `${Math.round(seconds / 3600)}h`
+  return `${Math.round(seconds / 86400)}d`
+}
+
+function renderSessions() {
+  if (!sessions.length) {
+    el.sessions.innerHTML = '<p class="rail-empty">No conversations yet</p>'
+    return
+  }
+
+  const frag = document.createDocumentFragment()
+  for (const session of sessions) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'session'
+    if (session.id === sessionID) button.setAttribute('aria-current', 'true')
+
+    const name = document.createElement('span')
+    name.className = 'session-name'
+    name.textContent = session.title || 'New chat'
+
+    const meta = document.createElement('span')
+    meta.className = 'session-meta'
+    meta.textContent = timeAgo(session.updated)
+
+    button.append(name, meta)
+    button.addEventListener('click', () => {
+      void window.conv.sessions.open(session.id)
+    })
+    frag.appendChild(button)
+  }
+
+  el.sessions.replaceChildren(frag)
+}
+
+function refreshSessions() {
+  window.conv.sessions
+    .list()
+    .then((list) => {
+      sessions = list ?? []
+      renderSessions()
+    })
+    .catch(() => {})
 }
 
 /* -------------------------------------------------------------------- models */
@@ -210,7 +336,7 @@ function renderVariants() {
   const options = ['default', ...variants]
 
   el.reasoningNote.textContent = variants.length
-    ? `this model supports ${variants.join(' / ')}`
+    ? `${variants.join(' / ')}`
     : 'not supported by this model'
 
   const frag = document.createDocumentFragment()
@@ -265,31 +391,35 @@ function renderThemes() {
   el.themes.replaceChildren(frag)
 }
 
-/* --------------------------------------------------------------------- sheet */
-
-async function openSheet() {
-  if (!el.sheet.open) el.sheet.showModal()
-  applySettings()
-
-  if (modelsLoaded) return
-
-  el.models.innerHTML = '<p class="empty">Loading…</p>'
-  try {
-    models = (await window.conv.models.list()) ?? []
-  } catch (cause) {
-    models = []
-    modelsLoaded = true
-    el.models.innerHTML = `<p class="empty">Could not load models: ${String(
-      cause?.message ?? cause
-    )}</p>`
-    return
+function renderAccents() {
+  const frag = document.createDocumentFragment()
+  for (const accent of ACCENTS) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'swatch'
+    button.style.setProperty('--swatch', settings.theme === 'light' ? accent.light : accent.color)
+    button.setAttribute('aria-pressed', String(settings.accent === accent.id))
+    button.title = accent.id
+    button.setAttribute('aria-label', accent.id)
+    button.addEventListener('click', () => {
+      void save({ accent: accent.id })
+    })
+    frag.appendChild(button)
   }
-  modelsLoaded = true
-  applySettings()
+  el.accents.replaceChildren(frag)
 }
 
-function closeSheet() {
-  if (el.sheet.open) el.sheet.close()
+function renderSegments(container, options, current, onPick) {
+  const frag = document.createDocumentFragment()
+  for (const option of options) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.setAttribute('aria-pressed', String(current === option.id))
+    button.textContent = option.name
+    button.addEventListener('click', () => onPick(option.id))
+    frag.appendChild(button)
+  }
+  container.replaceChildren(frag)
 }
 
 /* ------------------------------------------------------------------- messages */
@@ -297,11 +427,30 @@ function closeSheet() {
 function intro() {
   const wrap = document.createElement('div')
   wrap.className = 'intro'
+
   const title = document.createElement('h1')
-  title.textContent = 'subzer0'
+  title.textContent = 'What should this app become?'
+
   const line = document.createElement('p')
-  line.textContent = 'Talk to the AI. It rewrites the window you are looking at.'
-  wrap.append(title, line)
+  line.textContent =
+    'Ask in plain language. The AI edits this window while you watch — layout, color, panels, whole new features.'
+
+  const hints = document.createElement('div')
+  hints.className = 'intro-hints'
+  for (const hint of HINTS) {
+    const chip = document.createElement('button')
+    chip.type = 'button'
+    chip.className = 'hint'
+    chip.textContent = hint
+    chip.addEventListener('click', () => {
+      el.input.value = hint
+      el.input.focus()
+      autosize()
+    })
+    hints.appendChild(chip)
+  }
+
+  wrap.append(title, line, hints)
   return wrap
 }
 
@@ -328,8 +477,6 @@ function renderMessages() {
 
     if (message.type !== 'assistant') continue
 
-    // Only what the AI actually says. Reasoning traces and tool calls are
-    // noise in a chat this small.
     for (const part of message.content ?? []) {
       if (part.type !== 'text' || !part.text.trim()) continue
       const bubble = document.createElement('div')
@@ -361,7 +508,6 @@ function renderMessages() {
     text.textContent = error.message ?? String(error)
     line.appendChild(text)
 
-    // Limits and plan problems are fixable in Settings, so offer the door.
     if (error.kind === 'limit' || error.kind === 'plan') {
       const action = document.createElement('button')
       action.type = 'button'
@@ -377,16 +523,51 @@ function renderMessages() {
   if (stick) el.log.scrollTop = el.log.scrollHeight
 }
 
-function renderMeter(tokens, cost) {
-  if (!settings.showTokens) return
-  const used = (tokens?.input ?? 0) + (tokens?.output ?? 0) + (tokens?.reasoning ?? 0)
+function renderTokens(tokens, cost) {
+  if (tokens) lastTokens = tokens
+  if (typeof cost === 'number') lastCost = cost
+  if (!settings.showTokens || !lastTokens) {
+    el.tokensLabel.textContent = ''
+    return
+  }
+
+  const used =
+    (lastTokens.input ?? 0) + (lastTokens.output ?? 0) + (lastTokens.reasoning ?? 0)
   const left = Math.max(0, settings.budget - used)
   const pct = Math.min(100, (used / settings.budget) * 100)
 
-  el.meterLeft.textContent = `${left.toLocaleString('en-US')} tokens left`
+  el.tokensLabel.textContent = `${used.toLocaleString('en-US')} used · ${left.toLocaleString('en-US')} left`
+  el.meterLeft.textContent = `${pct.toFixed(1)}% of ${settings.budget.toLocaleString('en-US')}`
   el.meterFill.style.width = pct + '%'
   el.meterFill.className = 'meter-fill' + (pct >= 100 ? ' over' : pct >= 80 ? ' warn' : '')
-  el.meterCost.textContent = typeof cost === 'number' && cost > 0 ? `$${cost.toFixed(4)}` : ''
+  el.meterCost.textContent = lastCost > 0 ? `$${lastCost.toFixed(4)}` : ''
+}
+
+/* --------------------------------------------------------------------- sheet */
+
+async function openSheet() {
+  if (!el.sheet.open) el.sheet.showModal()
+  applySettings()
+
+  if (modelsLoaded) return
+
+  el.models.innerHTML = '<p class="empty">Loading…</p>'
+  try {
+    models = (await window.conv.models.list()) ?? []
+  } catch (cause) {
+    models = []
+    modelsLoaded = true
+    el.models.innerHTML = `<p class="empty">Could not load models: ${String(
+      cause?.message ?? cause
+    )}</p>`
+    return
+  }
+  modelsLoaded = true
+  applySettings()
+}
+
+function closeSheet() {
+  if (el.sheet.open) el.sheet.close()
 }
 
 /* --------------------------------------------------------------------- submit */
@@ -402,6 +583,7 @@ async function submit() {
   autosize()
   busy = true
   el.send.disabled = true
+  el.stopBtn.hidden = false
   renderMessages()
 
   try {
@@ -416,6 +598,7 @@ async function submit() {
       busy = false
       pending = null
       el.send.disabled = false
+      el.stopBtn.hidden = true
       renderMessages()
     }
   } catch (cause) {
@@ -423,13 +606,14 @@ async function submit() {
     busy = false
     pending = null
     el.send.disabled = false
+    el.stopBtn.hidden = true
     renderMessages()
   }
 }
 
 function autosize() {
   el.input.style.height = 'auto'
-  el.input.style.height = Math.min(180, el.input.scrollHeight) + 'px'
+  el.input.style.height = Math.min(220, el.input.scrollHeight) + 'px'
 }
 
 /* ----------------------------------------------------------------------- wire */
@@ -449,10 +633,19 @@ el.input.addEventListener('keydown', (event) => {
 el.input.addEventListener('input', autosize)
 
 el.gear.addEventListener('click', () => void openSheet())
+el.modelChip.addEventListener('click', () => void openSheet())
 el.close.addEventListener('click', closeSheet)
 
 el.sheet.addEventListener('click', (event) => {
   if (event.target === el.sheet) closeSheet()
+})
+
+el.newChat.addEventListener('click', () => {
+  void window.conv.newChat()
+})
+
+el.stopBtn.addEventListener('click', () => {
+  void window.conv.stop()
 })
 
 el.showTokens.addEventListener('change', () => {
@@ -469,28 +662,51 @@ el.modelSearch.addEventListener('input', () => {
   renderModels()
 })
 
+document.addEventListener('keydown', (event) => {
+  const mod = event.ctrlKey || event.metaKey
+  if (!mod) return
+  if (event.key.toLowerCase() === 'k') {
+    event.preventDefault()
+    void openSheet()
+  }
+  if (event.key.toLowerCase() === 'n') {
+    event.preventDefault()
+    void window.conv.newChat()
+  }
+})
+
 window.conv.onUpdate((update) => {
   messages = update.messages ?? []
   busy = Boolean(update.busy)
   pending = null
   if (update.settings) settings = update.settings
   if (update.providers?.go) goStatus = update.providers.go
+  if (update.sessionID) sessionID = update.sessionID
 
-  // A reply that landed after the error means the next turn worked; drop it.
   if (error && messages.length > errorAt) {
     error = null
     errorAt = 0
   }
 
   el.send.disabled = busy
+  el.stopBtn.hidden = !busy
   applySettings()
   renderMessages()
-  renderMeter(update.tokens, update.cost)
+  renderTokens(update.tokens, update.cost)
 })
 
 window.conv.onSettings((next) => {
   settings = next
   applySettings()
+})
+
+window.conv.onSessions((payload) => {
+  sessions = payload?.sessions ?? []
+  if (payload?.current) sessionID = payload.current
+  renderSessions()
+
+  const current = sessions.find((session) => session.id === sessionID)
+  el.sessionTitle.textContent = current?.title || 'New chat'
 })
 
 window.conv.onError((payload) => {
@@ -502,8 +718,16 @@ window.conv.onError((payload) => {
 window.conv.init().then(async (result) => {
   if (result?.settings) {
     settings = result.settings
-    applySettings()
   }
+  if (result?.sessionID) sessionID = result.sessionID
+  if (Array.isArray(result?.sessions)) sessions = result.sessions
+
+  applySettings()
+  refreshSessions()
+
+  const current = sessions.find((session) => session.id === sessionID)
+  el.sessionTitle.textContent = current?.title || 'New chat'
+
   // Fetch the model list once so the settings sheet is instant.
   try {
     models = (await window.conv.models.list()) ?? []

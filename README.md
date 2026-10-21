@@ -2,21 +2,22 @@
 
 An AI app that rewrites itself.
 
-You open it and get a quiet, dark, centered chat box. You tell the AI what you
-want — "give me a sidebar", "make it look like a terminal" — and it edits the app
-you are looking at. The window reloads and the change is there. Everything about
-the interface is fair game, because the interface is just three files the AI can
-rewrite.
+You open it and get a quiet, dark, wide chat window with a sidebar. You tell the AI
+what you want — "give me a sidebar with folders", "make it look like a terminal" —
+and it edits the app you are looking at. The window reloads and the change is
+there. Everything about the interface is fair game, because the interface is just
+three files the AI can rewrite.
 
 No API keys. No model downloads. It drives [OpenCode](https://opencode.ai), the
-coding agent on your machine, and picks up every model it can see — the free ones,
+coding agent on your machine, and picks up every model it can see - the free ones,
 your **OpenCode Go** models, and metered models billed to your balance.
-DeepSeek V4.1 Flash is the default, with its reasoning effort (`low` / `high` /
-`max`) selectable. Dark or light theme, a token budget, and the token counter are
-all in Settings, and everything persists.
+Reasoning effort, theme, accent colour, density and text size are all in
+Settings, and everything persists.
 
-If OpenCode is not running, subzer0 starts its own background service on a free
-port — you never have to open the desktop app first.
+When a free model runs out of usage, the app says so - with the reset time and a
+one-click way to pick another model. If OpenCode is closed, subzer0 starts its
+own background service on a free port. Conversations are kept in a sidebar,
+auto-named from their first message, and survive restarts.
 
 ## How it works
 
@@ -24,7 +25,7 @@ port — you never have to open the desktop app first.
 +-- the window is the app -----------------------------------+
 |                                                            |
 |   sandbox/app/{index.html,styles.css,app.js}                |
-|   one centered column, chat, settings dialog                |
+|   sidebar + wide chat, settings dialog                      |
 |                                                       (↺)  |  <- reset
 +---------------------------+--------------------------------+
                             | window.conv  (preload bridge)
@@ -94,7 +95,10 @@ talk to the host through `window.conv`:
   context size or price
 - **Reasoning** — the model's effort variants (`auto` / `low` / `high` / …)
 - **Theme** — dark or light
-- **Chat** — token counter on/off (off by default), token budget
+- **Accent** — six colours, applied instantly
+- **Density** — cozy or compact spacing
+- **Text size** — S / M / L
+- **Chat** — token counter (on by default), token budget
 
 Switching a model calls OpenCode's `session.switchModel`, so the conversation
 history survives. Settings are stored in `sandbox/.conv.json` together with the
@@ -137,8 +141,10 @@ file does not appear. Prints the model and token usage it observed.
 | Live reload after edits | working |
 | Your messages + assistant messages rendered | working |
 | Settings: model (free / Go / metered) + reasoning, 56 models | working |
-| Dark + light themes, persisted | working |
-| Token counter (off by default) + budget | working |
+| Dark + light themes, accent, density, text size | working |
+| Token counter (on by default) + budget | working |
+| Conversation sidebar: history, auto-titles, switching | working |
+| Stop button while the agent runs | working |
 | Auto-compaction when the context grows | working |
 | Starts its own OpenCode service when closed | working |
 | Reset control | working |
