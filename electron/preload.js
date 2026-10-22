@@ -127,34 +127,6 @@ function whenReady(callback) {
   }
 }
 
-function installHostControls() {
-  const host = document.createElement('div')
-  host.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483646'
-
-  const root = host.attachShadow({ mode: 'open' })
-  root.innerHTML = `
-    <style>
-      :host { all: initial; }
-      button {
-        width: 30px; height: 30px; padding: 0;
-        font: 14px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
-        cursor: pointer; border-radius: 50%;
-        border: 1px solid rgba(255,255,255,.14);
-        background: rgba(18,20,26,.8); color: #8b93a7;
-        backdrop-filter: blur(6px);
-      }
-      button:hover { color: #fff; background: rgba(34,38,48,.95); }
-    </style>
-    <button id="reset" title="Reset the app">&#8635;</button>
-  `
-
-  root.getElementById('reset').addEventListener('click', async () => {
-    if (confirm('Wipe the app and start over?')) await ipcRenderer.invoke('chat:reset')
-  })
-
-  document.documentElement.appendChild(host)
-}
-
 /* ------------------------------------------------------------ safety net */
 
 /**
@@ -267,6 +239,5 @@ function installFallbackChat() {
 }
 
 whenReady(() => {
-  installHostControls()
   setTimeout(installFallbackChat, 1500)
 })

@@ -8,9 +8,6 @@
 //   updates.check(), updates.apply(),
 //   onUpdate(cb), onError(cb), onSettings(cb), onSessions(cb),
 //   onUpdateProgress(cb), onSandboxChange(cb)
-//
-// onUpdate payload:
-//   { messages, tokens, cost, budget, settings, providers, busy }
 
 const el = {
   log: document.getElementById('log'),
@@ -23,7 +20,6 @@ const el = {
   meterCost: document.getElementById('meterCost'),
   meterLocked: document.getElementById('meterLocked'),
   tokensLabel: document.getElementById('tokensLabel'),
-  stopBtn: document.getElementById('stopBtn'),
   sessionTitle: document.getElementById('sessionTitle'),
   newChat: document.getElementById('newChat'),
   sessions: document.getElementById('sessions'),
@@ -40,53 +36,136 @@ const el = {
   modelNote: document.getElementById('modelNote'),
   variants: document.getElementById('variants'),
   reasoningNote: document.getElementById('reasoningNote'),
+  personalities: document.getElementById('personalities'),
+  personalityNote: document.getElementById('personalityNote'),
   themes: document.getElementById('themes'),
   accents: document.getElementById('accents'),
   densities: document.getElementById('densities'),
   fontSizes: document.getElementById('fontSizes'),
   showTokens: document.getElementById('showTokens'),
   budget: document.getElementById('budget'),
+  cmdMenu: document.getElementById('cmdMenu'),
+  custom: document.getElementById('custom'),
 }
 
 const THEMES = [
-  { id: 'dark', name: 'Dark', bg: '#0a0a0c', line: '#1e1e24', accent: '#6d77ff' },
-  { id: 'light', name: 'Light', bg: '#fbfbfc', line: '#e4e4ea', accent: '#4b55e6' },
+  { id: 'dark', name: 'dark', bg: '#000000', line: '#232323', accent: '#6b7280' },
+  { id: 'light', name: 'light', bg: '#fafafa', line: '#e4e4e4', accent: '#3f4651' },
 ]
 
 const ACCENTS = [
   { id: 'indigo', color: '#6d77ff', light: '#4b55e6' },
   { id: 'emerald', color: '#2fbf8f', light: '#128a63' },
-  { id: 'amber', color: '#dba63c', light: '#a7741c' },
+  { id: 'amber', color: '#555555', light: '#2e2e2e' },
   { id: 'rose', color: '#e05a72', light: '#c23a55' },
   { id: 'violet', color: '#a06bff', light: '#7c46d8' },
-  { id: 'slate', color: '#8f96a3', light: '#5d646f' },
+  { id: 'slate', color: '#6b7280', light: '#3f4651' },
 ]
 
 const DENSITIES = [
-  { id: 'comfortable', name: 'Cozy' },
-  { id: 'compact', name: 'Compact' },
+  { id: 'comfortable', name: 'cozy' },
+  { id: 'compact', name: 'compact' },
 ]
 
 const FONT_SIZES = [
-  { id: 'small', name: 'S' },
-  { id: 'medium', name: 'M' },
-  { id: 'large', name: 'L' },
+  { id: 'small', name: 's' },
+  { id: 'medium', name: 'm' },
+  { id: 'large', name: 'l' },
 ]
 
+const PERSONAS = [
+  { id: 'casual', name: 'casual', note: 'relaxed and friendly', prompt: 'be casual, warm, and friendly. use plain, relaxed language with occasional light humor.' },
+  { id: 'serious', name: 'serious', note: 'formal and precise', prompt: 'be serious, formal, and precise. no jokes, no slang, no emoji.' },
+  { id: 'funny', name: 'funny', note: 'witty and playful', prompt: 'be witty and playful. crack jokes and keep the tone light and entertaining.' },
+  { id: 'concise', name: 'concise', note: 'brief and direct', prompt: 'be brief and direct. short answers, no filler or preamble.' },
+  { id: 'balanced', name: 'balanced', note: 'no persona', prompt: '' },
+]
+
+const PERSONALITY_KEY = 'subzer0.personality'
+const COMPACT_KEY = 'subzer0.compact'
+const CUSTOM_KEY = 'subzer0.custom'
+const COMMANDS = ['persona', 'effort', 'model', 'version', 'compact']
+
+function storedPersonality() {
+  try {
+    return window.localStorage.getItem(PERSONALITY_KEY) ?? null
+  } catch {
+    return null
+  }
+}
+
+function persistPersonality(id) {
+  try {
+    window.localStorage.setItem(PERSONALITY_KEY, id)
+  } catch {
+    /* memory-only is fine */
+  }
+}
+
+function normalizePersonality() {
+  if (!PERSONAS.some((p) => p.id === settings.personality)) {
+    settings.personality = storedPersonality() || 'balanced'
+  }
+}
+
+function withContext(text) {
+  const persona = PERSONAS.find((p) => p.id === settings.personality)
+  const parts = []
+  if (persona && persona.prompt) parts.push(`[persona: ${persona.id}]\n${persona.prompt}`)
+  if (customInstructions.trim()) parts.push(`[instructions]\n${customInstructions.trim()}`)
+  parts.push('[language]\nreply in the same language the user writes in')
+  if (!parts.length) return text
+  return `${text}\n\n${parts.join('\n\n')}`
+}
+
+function cleanUserText(text) {
+  if (!text) return text
+  return text.replace(/\r?\n\r?\n\[(persona|instructions|language)[\s\S]*$/, '')
+}
+
+function loadCustom() {
+  try {
+    return window.localStorage.getItem(CUSTOM_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function persistCustom() {
+  try {
+    window.localStorage.setItem(CUSTOM_KEY, customInstructions)
+  } catch {
+    /* memory-only is fine */
+  }
+}
+
+function loadCompact() {
+  try {
+    return window.localStorage.getItem(COMPACT_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function applyCompact() {
+  document.documentElement.dataset.compact = compact ? 'on' : 'off'
+}
+
 const HINTS = [
-  'Give this a sidebar with folders',
-  'Make it feel like a terminal',
-  'Add a notes panel on the right',
+  'give it a sidebar',
+  'make it feel like a terminal',
+  'add a notes panel',
 ]
 
 const DEFAULT_SETTINGS = {
   model: { providerID: 'opencode', id: 'deepseek-v4.1-flash-free', variant: 'default' },
   theme: 'dark',
-  accent: 'indigo',
+  accent: 'slate',
   density: 'comfortable',
   fontSize: 'medium',
   showTokens: true,
   budget: 200000,
+  personality: 'balanced',
 }
 
 let settings = structuredClone(DEFAULT_SETTINGS)
@@ -106,6 +185,13 @@ let pending = null
 let error = null
 /** Message count when the error appeared, so a later reply clears it. */
 let errorAt = 0
+/** Transient command feedback rendered like a status line. */
+let notice = null
+/** denser chat spacing, toggled with ?compact. */
+let compact = loadCompact()
+applyCompact()
+/** user-written custom instructions, appended to each message. */
+let customInstructions = loadCustom()
 /** Latest release from window.conv.updates; drives the Update message. */
 let release = null
 let updateBusy = false
@@ -119,6 +205,7 @@ function activeAccent() {
 }
 
 function applySettings() {
+  normalizePersonality()
   const root = document.documentElement
   root.dataset.theme = settings.theme
   root.dataset.density = settings.density
@@ -128,20 +215,22 @@ function applySettings() {
   el.meter.hidden = !settings.showTokens
   el.showTokens.checked = Boolean(settings.showTokens)
   el.budget.value = String(settings.budget)
+  el.custom.value = customInstructions
 
   const model = selectedModel()
   el.modelChipName.textContent = model?.name ?? settings.model.id
   el.modelChipPlan.textContent = model
     ? model.plan === 'go'
-      ? 'Go'
+      ? 'go'
       : model.plan === 'paid'
-        ? 'Paid'
-        : 'Free'
+        ? 'paid'
+        : 'free'
     : ''
   el.modelDot.dataset.plan = model?.plan ?? 'free'
 
   renderModels()
   renderVariants()
+  renderPersonality()
   renderThemes()
   renderAccents()
   renderSegments(el.densities, DENSITIES, settings.density, (id) => save({ density: id }))
@@ -155,6 +244,7 @@ async function save(patch) {
     ...patch,
     model: { ...settings.model, ...(patch.model ?? {}) },
   }
+  if ('personality' in patch) persistPersonality(settings.personality)
   applySettings()
 
   try {
@@ -179,9 +269,6 @@ function selectedModel() {
 
 /* ------------------------------------------------------------------ sessions */
 
-// "Clear all" clears only subzer0's rail: session ids are hidden locally and
-// the OpenCode sessions themselves are never deleted. localStorage can be
-// unavailable in embedded contexts, so fall back to memory.
 const HIDDEN_KEY = 'subzer0.hidden-sessions'
 
 function loadHiddenSessions() {
@@ -222,7 +309,7 @@ function renderSessions() {
   el.clearAll.hidden = !visible.length
 
   if (!visible.length) {
-    el.sessions.innerHTML = '<p class="rail-empty">No conversations yet</p>'
+    el.sessions.innerHTML = '<p class="rail-empty">no conversations yet</p>'
     return
   }
 
@@ -238,7 +325,7 @@ function renderSessions() {
 
     const name = document.createElement('span')
     name.className = 'session-name'
-    name.textContent = session.title || 'New chat'
+    name.textContent = session.title || 'new chat'
 
     const meta = document.createElement('span')
     meta.className = 'session-meta'
@@ -252,8 +339,8 @@ function renderSessions() {
     const del = document.createElement('button')
     del.type = 'button'
     del.className = 'session-del'
-    del.title = 'Delete conversation'
-    del.setAttribute('aria-label', `Delete ${session.title || 'conversation'}`)
+    del.title = 'delete conversation'
+    del.setAttribute('aria-label', `delete ${session.title || 'conversation'}`)
     del.innerHTML =
       '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="m2.5 2.5 5 5m0-5-5 5"/></svg>'
     del.addEventListener('click', (event) => {
@@ -281,9 +368,9 @@ function refreshSessions() {
 /* -------------------------------------------------------------------- models */
 
 const GROUPS = [
-  { plan: 'free', label: 'Free', hint: 'no subscription needed' },
-  { plan: 'go', label: 'OpenCode Go', hint: '' },
-  { plan: 'paid', label: 'Pay per token', hint: 'billed to your OpenCode balance' },
+  { plan: 'free', label: 'free', hint: 'no subscription needed' },
+  { plan: 'go', label: 'opencode go', hint: '' },
+  { plan: 'paid', label: 'pay per token', hint: 'billed to your opencode balance' },
 ]
 
 function goHint() {
@@ -295,9 +382,9 @@ function goHint() {
 function modelMeta(model) {
   if (model.plan === 'paid') {
     const { input, output } = model.price ?? {}
-    return input || output ? `$${input} / $${output} per M` : 'metered'
+    return input || output ? `$${input} / $${output} per m` : 'metered'
   }
-  return model.context ? `${Math.round(model.context / 1000)}K` : ''
+  return model.context ? `${Math.round(model.context / 1000)}k` : ''
 }
 
 function modelRow(model) {
@@ -307,9 +394,6 @@ function modelRow(model) {
   const active = model.id === settings.model.id && model.providerID === settings.model.providerID
   button.setAttribute('aria-pressed', String(active))
 
-  const dot = document.createElement('span')
-  dot.className = 'dot'
-
   const name = document.createElement('span')
   name.className = 'name'
   name.textContent = model.name
@@ -318,7 +402,7 @@ function modelRow(model) {
   meta.className = 'meta'
   meta.textContent = modelMeta(model)
 
-  button.append(dot, name, meta)
+  button.append(name, meta)
   button.addEventListener('click', () => {
     const keep =
       settings.model.variant === 'default' || model.variants.includes(settings.model.variant)
@@ -336,7 +420,7 @@ function modelRow(model) {
 function renderModels() {
   if (!models.length) {
     el.models.innerHTML = `<p class="empty">${
-      modelsLoaded ? 'No models available.' : 'Loading…'
+      modelsLoaded ? 'no models available.' : 'loading…'
     }</p>`
     el.modelNote.textContent = ''
     return
@@ -376,7 +460,7 @@ function renderModels() {
   if (!frag.childNodes.length) {
     const empty = document.createElement('p')
     empty.className = 'empty'
-    empty.textContent = `No model matches “${modelQuery.trim()}”.`
+    empty.textContent = `no model matches “${modelQuery.trim()}”.`
     frag.appendChild(empty)
   }
 
@@ -478,9 +562,14 @@ function renderSegments(container, options, current, onPick) {
   container.replaceChildren(frag)
 }
 
+function renderPersonality() {
+  const persona = PERSONAS.find((p) => p.id === settings.personality) ?? PERSONAS[0]
+  el.personalityNote.textContent = persona.note || ''
+  renderSegments(el.personalities, PERSONAS, settings.personality, (id) => save({ personality: id }))
+}
+
 /* ------------------------------------------------------------------ updates */
 
-/** Ask the host whether a newer subzer0 release is out. Quiet when it can't. */
 async function checkForUpdate() {
   if (!window.conv.updates) return
   try {
@@ -495,18 +584,17 @@ async function checkForUpdate() {
   renderMessages()
 }
 
-/** Download + reinstall the newest release; the app then relaunches itself. */
 async function applyUpdate() {
   if (updateBusy || !window.conv.updates) return
   updateBusy = true
-  updateNote = 'Downloading…'
+  updateNote = 'downloading…'
   renderMessages()
 
   try {
     const result = await window.conv.updates.apply()
     if (result && result.ok === false) {
       updateBusy = false
-      updateNote = result.reason || 'Update failed'
+      updateNote = result.reason || 'update failed'
       renderMessages()
     }
   } catch (cause) {
@@ -514,7 +602,6 @@ async function applyUpdate() {
     updateNote = String(cause?.message ?? cause)
     renderMessages()
   }
-  // On success the host quits and relaunches; nothing left to render.
 }
 
 function updateCard() {
@@ -523,14 +610,14 @@ function updateCard() {
 
   const text = document.createElement('span')
   text.textContent = updateBusy
-    ? updateNote || 'Updating…'
+    ? updateNote || 'updating…'
     : updateNote || `subzer0 ${release?.latest} is available — you're on ${release?.current}`
   line.appendChild(text)
 
   const action = document.createElement('button')
   action.type = 'button'
   action.className = 'update-btn'
-  action.textContent = updateBusy ? 'Updating…' : 'Update'
+  action.textContent = updateBusy ? 'updating…' : 'update'
   action.disabled = updateBusy
   action.addEventListener('click', () => void applyUpdate())
   line.appendChild(action)
@@ -544,12 +631,18 @@ function intro() {
   const wrap = document.createElement('div')
   wrap.className = 'intro'
 
+  const modelName = (selectedModel()?.name || settings.model?.id || 'the model').toLowerCase()
+
   const title = document.createElement('h1')
-  title.textContent = 'What should this app become?'
+  title.textContent = 'what are we building?'
 
   const line = document.createElement('p')
   line.textContent =
-    'Ask in plain language. The AI edits this window while you watch — layout, color, panels, whole new features.'
+    `type what you want and ${modelName} will change it right here — layout, colors, whatever.`
+
+  const examplesLabel = document.createElement('div')
+  examplesLabel.className = 'intro-examples'
+  examplesLabel.textContent = 'examples:'
 
   const hints = document.createElement('div')
   hints.className = 'intro-hints'
@@ -566,7 +659,7 @@ function intro() {
     hints.appendChild(chip)
   }
 
-  wrap.append(title, line, hints)
+  wrap.append(title, line, examplesLabel, hints)
   return wrap
 }
 
@@ -576,7 +669,7 @@ function renderMessages() {
 
   const showUpdate = Boolean(release?.available || updateBusy)
 
-  if (!messages.length && !busy && !pending && !error) {
+  if (!messages.length && !busy && !pending && !error && !notice) {
     el.log.appendChild(intro())
     if (showUpdate) el.log.appendChild(updateCard())
     return
@@ -584,8 +677,7 @@ function renderMessages() {
 
   for (const message of messages) {
     if (message.type === 'user') {
-      // OpenCode 2.1.2 puts the text at the top level: { id, type: 'user', text }.
-      const text = message.text ?? message.payload?.text
+      const text = cleanUserText(message.text ?? message.payload?.text)
       if (!text) continue
       const bubble = document.createElement('div')
       bubble.className = 'msg user'
@@ -597,11 +689,20 @@ function renderMessages() {
     if (message.type !== 'assistant') continue
 
     for (const part of message.content ?? []) {
+      if (part.type === 'reasoning' || part.type === 'thinking') {
+        if (!part.text || !part.text.trim()) continue
+        const details = document.createElement('details')
+        details.className = 'msg thinking'
+        const summary = document.createElement('summary')
+        summary.textContent = 'thoughts'
+        const body = document.createElement('div')
+        body.textContent = part.text
+        details.append(summary, body)
+        el.log.appendChild(details)
+        continue
+      }
       if (part.type !== 'text' || !part.text.trim()) continue
-      const bubble = document.createElement('div')
-      bubble.className = 'msg assistant'
-      bubble.textContent = part.text
-      el.log.appendChild(bubble)
+      renderAssistantText(el.log, part.text)
     }
   }
 
@@ -631,7 +732,7 @@ function renderMessages() {
       const action = document.createElement('button')
       action.type = 'button'
       action.className = 'err-action'
-      action.textContent = 'Choose a model'
+      action.textContent = 'choose a model'
       action.addEventListener('click', () => void openSheet())
       line.appendChild(action)
     }
@@ -639,9 +740,69 @@ function renderMessages() {
     el.log.appendChild(line)
   }
 
+  if (notice) {
+    const line = document.createElement('div')
+    line.className = 'notice'
+    line.textContent = notice
+    el.log.appendChild(line)
+  }
+
   if (showUpdate) el.log.appendChild(updateCard())
 
   if (stick) el.log.scrollTop = el.log.scrollHeight
+}
+
+function renderAssistantText(container, text) {
+  const parts = text.split(/```/)
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2 === 1) {
+      const pre = document.createElement('pre')
+      pre.className = 'code'
+      const code = document.createElement('code')
+      code.textContent = parts[i].replace(/^[^\n]*\n/, '')
+      const btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'code-copy'
+      btn.textContent = 'copy'
+      btn.addEventListener('click', () => {
+        if (navigator.clipboard) navigator.clipboard.writeText(code.textContent).catch(() => {})
+        btn.textContent = 'copied'
+        setTimeout(() => (btn.textContent = 'copy'), 1200)
+      })
+      pre.append(btn, code)
+      container.appendChild(pre)
+    } else if (parts[i].trim()) {
+      const bubble = document.createElement('div')
+      bubble.className = 'msg assistant'
+      bubble.textContent = parts[i]
+      container.appendChild(bubble)
+    }
+  }
+}
+
+function renderCmdMenu() {
+  const value = el.input.value
+  if (!value.startsWith('?') || value.includes(' ')) {
+    el.cmdMenu.hidden = true
+    return
+  }
+  const frag = document.createDocumentFragment()
+  for (const cmd of COMMANDS) {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.className = 'cmd-item'
+    btn.textContent = `?${cmd}`
+    btn.addEventListener('mousedown', (event) => {
+      event.preventDefault()
+      el.input.value = `?${cmd} `
+      el.input.focus()
+      autosize()
+      el.cmdMenu.hidden = true
+    })
+    frag.appendChild(btn)
+  }
+  el.cmdMenu.replaceChildren(frag)
+  el.cmdMenu.hidden = false
 }
 
 function renderTokens(tokens, cost) {
@@ -672,13 +833,13 @@ async function openSheet() {
 
   if (modelsLoaded) return
 
-  el.models.innerHTML = '<p class="empty">Loading…</p>'
+  el.models.innerHTML = '<p class="empty">loading…</p>'
   try {
     models = (await window.conv.models.list()) ?? []
   } catch (cause) {
     models = []
     modelsLoaded = true
-    el.models.innerHTML = `<p class="empty">Could not load models: ${String(
+    el.models.innerHTML = `<p class="empty">could not load models: ${String(
       cause?.message ?? cause
     )}</p>`
     return
@@ -693,41 +854,126 @@ function closeSheet() {
 
 /* --------------------------------------------------------------------- submit */
 
+function setSendBusy(on) {
+  el.send.classList.toggle('busy', on)
+  el.send.title = on ? 'stop' : 'send (enter)'
+  el.send.setAttribute('aria-label', on ? 'stop' : 'send')
+}
+
+function showNotice(text) {
+  notice = text
+  error = null
+  renderMessages()
+}
+
+function handleCommand(text) {
+  const parts = text.slice(1).trim().split(/\s+/)
+  const name = (parts[0] || '').toLowerCase()
+  const arg = parts.slice(1).join(' ').trim()
+
+  switch (name) {
+    case 'persona': {
+      const id = arg.toLowerCase()
+      if (!id) {
+        const current = PERSONAS.find((p) => p.id === settings.personality)
+        showNotice(`persona: ${current?.name ?? 'balanced'} · ${PERSONAS.map((p) => p.id).join(', ')}`)
+      } else if (PERSONAS.some((p) => p.id === id)) {
+        void save({ personality: id })
+        showNotice(`persona set to ${id}`)
+      } else {
+        showNotice(`unknown persona · try ${PERSONAS.map((p) => p.id).join(', ')}`)
+      }
+      return
+    }
+    case 'effort': {
+      const variants = ['default', ...(selectedModel()?.variants ?? [])]
+      if (!arg) {
+        showNotice(`effort: ${settings.model.variant} · ${variants.join(', ')}`)
+      } else {
+        void save({ model: { variant: arg } })
+        showNotice(`effort set to ${arg}`)
+      }
+      return
+    }
+    case 'model': {
+      if (!arg) {
+        showNotice(`model: ${selectedModel()?.name ?? settings.model.id}`)
+      } else {
+        const m = models.find(
+          (x) =>
+            x.name.toLowerCase().includes(arg.toLowerCase()) ||
+            x.id.toLowerCase().includes(arg.toLowerCase())
+        )
+        if (m) {
+          const keep =
+            settings.model.variant === 'default' || m.variants.includes(settings.model.variant)
+          void save({ model: { providerID: m.providerID, id: m.id, variant: keep ? settings.model.variant : 'default' } })
+          showNotice(`model set to ${m.name}`)
+        } else {
+          showNotice(`no model matches "${arg}"`)
+        }
+      }
+      return
+    }
+    case 'version': {
+      showNotice(`subzer0 · ${selectedModel()?.name ?? settings.model.id} · ${settings.model.variant}`)
+      return
+    }
+    case 'compact': {
+      compact = !compact
+      try {
+        window.localStorage.setItem(COMPACT_KEY, compact ? '1' : '0')
+      } catch {
+        /* memory-only is fine */
+      }
+      applyCompact()
+      showNotice(`compact ${compact ? 'on' : 'off'}`)
+      return
+    }
+    default:
+      showNotice('unknown command · try ?persona ?effort ?model ?version ?compact')
+  }
+}
+
 async function submit() {
   const text = el.input.value.trim()
   if (!text || busy) return
 
+  if (text.startsWith('?')) {
+    el.input.value = ''
+    autosize()
+    handleCommand(text)
+    return
+  }
+
   error = null
+  notice = null
   errorAt = 0
   pending = text
   el.input.value = ''
   autosize()
   busy = true
-  el.send.disabled = true
-  el.stopBtn.hidden = false
+  setSendBusy(true)
   renderMessages()
 
   try {
-    const result = await window.conv.send(text)
-    // Standalone exports have no AI behind the bridge; don't hang on "working".
+    const result = await window.conv.send(withContext(text))
     if (result && result.ok === false) {
       error = {
         message: result.reason
-          ? `This copy has no AI attached (${result.reason}).`
-          : 'This copy has no AI attached.',
+          ? `this copy has no ai attached (${result.reason}).`
+          : 'this copy has no ai attached.',
       }
       busy = false
       pending = null
-      el.send.disabled = false
-      el.stopBtn.hidden = true
+      setSendBusy(false)
       renderMessages()
     }
   } catch (cause) {
     error = { message: String(cause?.message ?? cause) }
     busy = false
     pending = null
-    el.send.disabled = false
-    el.stopBtn.hidden = true
+    setSendBusy(false)
     renderMessages()
   }
 }
@@ -738,6 +984,15 @@ function autosize() {
 }
 
 /* ----------------------------------------------------------------------- wire */
+
+// Boot splash: hold for 3s, then fade out and remove.
+const bootEl = document.getElementById('boot')
+if (bootEl) {
+  setTimeout(() => {
+    bootEl.classList.add('hide')
+    setTimeout(() => bootEl.remove(), 600)
+  }, 3000)
+}
 
 el.composer.addEventListener('submit', (event) => {
   event.preventDefault()
@@ -751,7 +1006,19 @@ el.input.addEventListener('keydown', (event) => {
   }
 })
 
-el.input.addEventListener('input', autosize)
+el.input.addEventListener('input', () => {
+  autosize()
+  renderCmdMenu()
+})
+
+el.cmdMenu.addEventListener('click', () => {
+  el.cmdMenu.hidden = true
+})
+
+el.custom.addEventListener('input', () => {
+  customInstructions = el.custom.value
+  persistCustom()
+})
 
 el.gear.addEventListener('click', () => void openSheet())
 el.modelChip.addEventListener('click', () => void openSheet())
@@ -765,8 +1032,11 @@ el.newChat.addEventListener('click', () => {
   void window.conv.newChat()
 })
 
-el.stopBtn.addEventListener('click', () => {
-  void window.conv.stop()
+el.send.addEventListener('click', (event) => {
+  if (busy) {
+    event.preventDefault()
+    void window.conv.stop()
+  }
 })
 
 el.showTokens.addEventListener('change', () => {
@@ -791,7 +1061,7 @@ let clearArmTimer = null
 function disarmClear() {
   clearArmedAt = 0
   el.clearAll.classList.remove('arm')
-  el.clearAll.textContent = 'Clear all'
+  el.clearAll.textContent = 'clear all'
 }
 
 el.clearAll.addEventListener('click', () => {
@@ -804,7 +1074,7 @@ el.clearAll.addEventListener('click', () => {
   }
   clearArmedAt = Date.now()
   el.clearAll.classList.add('arm')
-  el.clearAll.textContent = 'Sure? Tap again'
+  el.clearAll.textContent = 'sure? tap again'
   if (clearArmTimer) clearTimeout(clearArmTimer)
   clearArmTimer = setTimeout(disarmClear, 4000)
 })
@@ -822,10 +1092,47 @@ document.addEventListener('keydown', (event) => {
   }
 })
 
+function playChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    ;[880, 1174.66].forEach((freq, i) => {
+      const o = ctx.createOscillator()
+      const g = ctx.createGain()
+      o.connect(g)
+      g.connect(ctx.destination)
+      o.type = 'sine'
+      o.frequency.value = freq
+      const t = ctx.currentTime + i * 0.12
+      g.gain.setValueAtTime(0.0001, t)
+      g.gain.exponentialRampToValueAtTime(0.25, t + 0.01)
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35)
+      o.start(t)
+      o.stop(t + 0.4)
+    })
+  } catch {
+    /* audio unavailable */
+  }
+}
+
+function notifyDone() {
+  try {
+    if (window.Notification && Notification.permission === 'granted') {
+      new Notification('subzer0', { body: 'done' })
+    } else if (window.Notification && Notification.permission !== 'denied') {
+      Notification.requestPermission()
+    }
+  } catch {
+    /* notifications unavailable */
+  }
+  playChime()
+}
+
 window.conv.onUpdate((update) => {
+  const prevBusy = busy
   messages = update.messages ?? []
   busy = Boolean(update.busy)
   pending = null
+  notice = null
   if (update.settings) settings = update.settings
   if (update.providers?.go) goStatus = update.providers.go
   if (update.sessionID) sessionID = update.sessionID
@@ -835,8 +1142,9 @@ window.conv.onUpdate((update) => {
     errorAt = 0
   }
 
-  el.send.disabled = busy
-  el.stopBtn.hidden = !busy
+  if (prevBusy && !busy && messages.length) notifyDone()
+
+  setSendBusy(busy)
   applySettings()
   renderMessages()
   renderTokens(update.tokens, update.cost)
@@ -853,7 +1161,7 @@ window.conv.onSessions((payload) => {
   renderSessions()
 
   const current = sessions.find((session) => session.id === sessionID)
-  el.sessionTitle.textContent = current?.title || 'New chat'
+  el.sessionTitle.textContent = current?.title || 'new chat'
 })
 
 window.conv.onError((payload) => {
@@ -876,6 +1184,11 @@ window.conv.init().then(async (result) => {
   if (result?.settings) {
     settings = result.settings
   }
+  // restore the last-chosen personality; the host may not carry it across reloads.
+  const stored = storedPersonality()
+  if (PERSONAS.some((p) => p.id === stored)) settings.personality = stored
+  normalizePersonality()
+  customInstructions = loadCustom()
   if (result?.sessionID) sessionID = result.sessionID
   if (Array.isArray(result?.sessions)) sessions = result.sessions
 
@@ -884,13 +1197,14 @@ window.conv.init().then(async (result) => {
   void checkForUpdate()
 
   const current = sessions.find((session) => session.id === sessionID)
-  el.sessionTitle.textContent = current?.title || 'New chat'
+  el.sessionTitle.textContent = current?.title || 'new chat'
 
   // Fetch the model list once so the settings sheet is instant.
   try {
     models = (await window.conv.models.list()) ?? []
     modelsLoaded = true
     applySettings()
+    renderMessages()
   } catch {
     /* the sheet will retry */
   }

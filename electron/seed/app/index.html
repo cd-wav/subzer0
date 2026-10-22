@@ -7,6 +7,25 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <div class="boot" id="boot" aria-hidden="true">
+      <svg class="boot-logo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="8" fill="#0b0b0e" />
+        <circle cx="16" cy="16" r="7" fill="none" stroke="#f2f3f7" stroke-width="2.6" />
+        <line
+          x1="11.1"
+          y1="20.9"
+          x2="20.9"
+          y2="11.1"
+          stroke="#7b86ff"
+          stroke-width="2.6"
+          stroke-linecap="round"
+        />
+      </svg>
+      <div class="boot-mark">
+        <span>subzer0</span>
+      </div>
+    </div>
+
     <div class="shell">
       <aside class="rail">
         <div class="brand">
@@ -27,26 +46,26 @@
         </div>
 
         <button class="newchat" id="newChat">
-          <span>New chat</span>
+          <span>new chat</span>
           <kbd>⌘N</kbd>
         </button>
 
         <div class="rail-head">
-          <span class="rail-label">Recent</span>
-          <button class="clear-all" id="clearAll" hidden>Clear all</button>
+          <span class="rail-label">recent</span>
+          <button class="clear-all" id="clearAll" hidden>clear all</button>
         </div>
-        <nav class="sessions" id="sessions" aria-label="Conversations">
-          <p class="rail-empty">No conversations yet</p>
+        <nav class="sessions" id="sessions" aria-label="conversations">
+          <p class="rail-empty">no conversations yet</p>
         </nav>
 
         <div class="rail-foot">
-          <button class="modelchip" id="modelChip" title="Change model">
+          <button class="modelchip" id="modelChip" title="change model">
             <span class="dot" id="modelDot" data-plan="free"></span>
-            <span class="modelchip-name" id="modelChipName">Model</span>
+            <span class="modelchip-name" id="modelChipName">model</span>
             <span class="modelchip-plan" id="modelChipPlan"></span>
           </button>
-          <button class="rail-btn" id="gear" title="Settings (Ctrl+K)">
-            Settings
+          <button class="rail-btn" id="gear" title="settings (ctrl+k)">
+            settings
             <kbd>⌘K</kbd>
           </button>
         </div>
@@ -54,10 +73,9 @@
 
       <main class="main">
         <header class="topbar">
-          <div class="title" id="sessionTitle">New chat</div>
+          <div class="title" id="sessionTitle">new chat</div>
           <div class="top-actions">
             <span class="tokens" id="tokensLabel"></span>
-            <button class="stop" id="stopBtn" hidden>Stop</button>
           </div>
         </header>
 
@@ -65,14 +83,15 @@
 
         <footer class="dock">
           <form class="composer" id="composer">
+            <span class="prompt" aria-hidden="true">❯</span>
             <textarea
               id="input"
               rows="1"
-              placeholder="Describe what you want to change…"
+              placeholder="tell me what to change…"
               autofocus
             ></textarea>
-            <button type="submit" id="send" class="send" title="Send (Enter)" aria-label="Send">
-              <svg width="15" height="15" viewBox="0 0 14 14" aria-hidden="true">
+            <button type="submit" id="send" class="send" title="send (enter)" aria-label="send">
+              <svg class="ic-send" width="15" height="15" viewBox="0 0 14 14" aria-hidden="true">
                 <path
                   fill="none"
                   stroke="currentColor"
@@ -82,8 +101,19 @@
                   d="M7 11.5V2.5M3 6.2 7 2.3l4 3.9"
                 />
               </svg>
+              <svg class="ic-stop" width="13" height="13" viewBox="0 0 14 14" aria-hidden="true">
+                <path
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  d="m3.5 3.5 7 7m0-7-7 7"
+                />
+              </svg>
             </button>
           </form>
+
+          <div class="cmd-menu" id="cmdMenu" hidden></div>
 
           <div class="meter" id="meter">
             <div class="meter-track"><div class="meter-fill" id="meterFill"></div></div>
@@ -91,7 +121,7 @@
               <span id="meterLeft"></span>
               <span class="meter-right">
                 <span id="meterCost"></span>
-                <span id="meterLocked" hidden>AI offline</span>
+                <span id="meterLocked" hidden>ai offline</span>
               </span>
             </div>
           </div>
@@ -101,8 +131,8 @@
 
     <dialog class="sheet" id="settings">
       <header class="sheet-head">
-        <h2>Settings</h2>
-        <button class="iconbtn" id="close" aria-label="Close">
+        <h2>settings</h2>
+        <button class="iconbtn" id="close" aria-label="close">
           <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
             <path
               fill="none"
@@ -118,58 +148,72 @@
       <div class="sheet-body">
         <section class="panel models-panel">
           <div class="group-head">
-            <h3>Model</h3>
+            <h3>model</h3>
             <span class="note" id="modelNote"></span>
           </div>
           <input
             class="search"
             id="modelSearch"
             type="search"
-            placeholder="Search models"
+            placeholder="search models"
             autocomplete="off"
             spellcheck="false"
           />
           <div class="rows" id="models">
-            <p class="empty">Loading…</p>
+            <p class="empty">loading…</p>
           </div>
         </section>
 
         <div class="panel-stack">
           <section class="panel">
             <div class="group-head">
-              <h3>Reasoning</h3>
+              <h3>personality</h3>
+              <span class="note" id="personalityNote"></span>
+            </div>
+            <div class="seg wrap" id="personalities"></div>
+          </section>
+
+          <section class="panel">
+            <div class="group-head">
+              <h3>reasoning</h3>
               <span class="note" id="reasoningNote"></span>
             </div>
             <div class="seg" id="variants"></div>
           </section>
 
           <section class="panel">
-            <div class="group-head"><h3>Appearance</h3></div>
+            <div class="group-head"><h3>appearance</h3></div>
             <div class="themes" id="themes"></div>
             <div class="row between">
-              <span class="row-label">Accent</span>
+              <span class="row-label">accent</span>
               <div class="swatches" id="accents"></div>
             </div>
             <div class="row between">
-              <span class="row-label">Density</span>
+              <span class="row-label">density</span>
               <div class="seg small" id="densities"></div>
             </div>
             <div class="row between">
-              <span class="row-label">Text size</span>
+              <span class="row-label">text size</span>
               <div class="seg small" id="fontSizes"></div>
             </div>
           </section>
 
           <section class="panel">
-            <div class="group-head"><h3>Chat</h3></div>
+            <div class="group-head"><h3>chat</h3></div>
             <label class="row">
-              <span class="row-label">Token counter</span>
+              <span class="row-label">token counter</span>
               <input type="checkbox" id="showTokens" />
             </label>
             <label class="row">
-              <span class="row-label">Token budget</span>
+              <span class="row-label">token budget</span>
               <input type="number" id="budget" min="1000" step="5000" />
             </label>
+            <textarea
+              class="custom"
+              id="custom"
+              rows="3"
+              placeholder="custom instructions — always do this…"
+            ></textarea>
           </section>
         </div>
       </div>
