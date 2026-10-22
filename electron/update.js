@@ -4,13 +4,18 @@
  * Self-update: check GitHub for a newer subzer0 release, download the setup
  * exe and run it in `--update` mode — a silent reinstall that overwrites the
  * host while leaving the user's sandbox (app files, settings, sessions)
- * untouched, then relaunches. Auth rides on the gh CLI, the same mechanism
- * `npm run publish:release` uses.
+ * untouched, then relaunches.
+ *
+ * The download streams straight from the GitHub API using the gh CLI's token,
+ * so it reports real progress and resumes a partial file instead of starting
+ * over. `gh release download` is kept as a fallback.
  */
 
 const { app } = require('electron')
 const { execFile, spawn } = require('node:child_process')
 const { promisify } = require('node:util')
+const { once } = require('node:events')
+const fs = require('node:fs')
 const fsp = require('node:fs/promises')
 const path = require('node:path')
 
@@ -24,12 +29,14 @@ const CHECK_TTL = 10 * 60 * 1000
 const DOWNLOAD_TIMEOUT = 45 * 60 * 1000
 
 let checkCache = { at: 0, result: null }
+let tokenCache
 let applying = false
 
 function explain(cause) {
   if (cause && cause.code === 'ENOENT') return 'gh CLI not found on this machine'
   const text = String((cause && (cause.stderr || cause.message)) || cause).trim()
   if (/not logged in|authenticat|credential/i.test(text)) return 'gh is not signed in to GitHub'
+  if (/abort/i.test(String(cause && cause.name))) return 'download timed out'
   return text.split('\n')[0].slice(0, 140) || 'update failed'
 }
 
@@ -50,17 +57,19 @@ function compareVersions(a, b) {
 }
 
 async function latestRelease() {
-  const { stdout } = await run(
-    'gh',
-    ['release', 'view', '--repo', REPO, '--json', 'tagName,body,assets'],
-    { timeout: 20_000, windowsHide: true }
-  )
+  // The REST endpoint is the one that carries numeric asset ids, which the
+  // streaming download needs; gh's `--json assets` only exposes node ids.
+  const { stdout } = await run('gh', ['api', `repos/${REPO}/releases/latest`], {
+    timeout: 20_000,
+    windowsHide: true,
+  })
   return JSON.parse(stdout)
 }
 
 /**
  * @returns {Promise<{ ok: boolean, current: string, latest?: string,
- *   available?: boolean, notes?: string|null, asset?: string|null, reason?: string }>}
+ *   available?: boolean, notes?: string|null, asset?: string|null,
+ *   assetId?: number|null, assetSize?: number|null, reason?: string }>}
  */
 async function checkUpdate({ force = false } = {}) {
   const current = app.getVersion() || '0.0.0'
@@ -70,7 +79,7 @@ async function checkUpdate({ force = false } = {}) {
 
   try {
     const release = await latestRelease()
-    const latest = parseVersion(release.tagName)
+    const latest = parseVersion(release.tag_name)
     const asset = (release.assets ?? []).find((entry) => entry.name === assetName(latest))
     const result = {
       ok: true,
@@ -79,11 +88,144 @@ async function checkUpdate({ force = false } = {}) {
       available: compareVersions(latest, current) > 0,
       notes: typeof release.body === 'string' && release.body.trim() ? release.body.trim() : null,
       asset: asset ? asset.name : null,
+      assetId: asset ? asset.id : null,
+      assetSize: asset ? asset.size : null,
     }
     checkCache = { at: Date.now(), result }
     return result
   } catch (cause) {
     return { ok: false, current, reason: explain(cause) }
+  }
+}
+
+/** The gh token, so the private release asset can be fetched directly. */
+async function githubToken() {
+  if (tokenCache !== undefined) return tokenCache
+  try {
+    const { stdout } = await run('gh', ['auth', 'token'], {
+      timeout: 20_000,
+      windowsHide: true,
+    })
+    tokenCache = stdout.trim() || null
+  } catch {
+    tokenCache = null
+  }
+  return tokenCache
+}
+
+async function fileSize(target) {
+  try {
+    return (await fsp.stat(target)).size
+  } catch {
+    return 0
+  }
+}
+
+function megabytes(bytes) {
+  return (bytes / 1048576).toFixed(0)
+}
+
+/**
+ * Stream the release asset with progress. Resumes from whatever is already on
+ * disk, so a dropped connection picks up where it stopped.
+ */
+async function streamAsset(check, dest, report) {
+  const token = await githubToken()
+  if (!token) throw new Error('gh is not signed in to GitHub')
+
+  let start = await fileSize(dest)
+  if (check.assetSize && start > check.assetSize) {
+    await fsp.rm(dest, { force: true })
+    start = 0
+  }
+  if (check.assetSize && start === check.assetSize) return
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT)
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/octet-stream',
+    'User-Agent': 'subzer0-updater',
+  }
+  if (start) headers.Range = `bytes=${start}-`
+
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${REPO}/releases/assets/${check.assetId}`,
+      { headers, redirect: 'follow', signal: controller.signal }
+    )
+    if (response.status === 416) return
+    if (!response.ok) throw new Error(`download failed (http ${response.status})`)
+    if (!response.body) throw new Error('download failed (empty response)')
+
+    const resumed = response.status === 206
+    if (!resumed) start = 0
+    const length = Number(response.headers.get('content-length') || 0)
+    const total = resumed ? start + length : length || check.assetSize || 0
+
+    const sink = fs.createWriteStream(dest, { flags: resumed ? 'a' : 'w' })
+    const finished = new Promise((resolve, reject) => {
+      sink.once('error', reject)
+      sink.once('finish', resolve)
+    })
+
+    let done = start
+    let lastReport = 0
+    const progress = (force = false) => {
+      const now = Date.now()
+      if (!force && now - lastReport < 500) return
+      lastReport = now
+      const percent = total ? Math.min(100, Math.round((done / total) * 100)) : 0
+      const suffix = total ? ` · ${megabytes(done)} of ${megabytes(total)} mb` : ''
+      report(`downloading ${percent}%${suffix}`)
+    }
+
+    progress(true)
+    try {
+      for await (const chunk of response.body) {
+        done += chunk.length
+        if (!sink.write(chunk)) await once(sink, 'drain')
+        progress()
+      }
+    } finally {
+      sink.end()
+      await finished
+    }
+    progress(true)
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/** API stream first; `gh release download` only if that is not possible. */
+async function downloadRelease(check, dest, report) {
+  try {
+    await streamAsset(check, dest, report)
+    if (check.assetSize && (await fileSize(dest)) !== check.assetSize) {
+      throw new Error('download was incomplete')
+    }
+    return
+  } catch (cause) {
+    if (cause && cause.name === 'AbortError') throw cause
+    report('Downloading subzer0 over gh…')
+    await fsp.rm(dest, { force: true })
+    await run(
+      'gh',
+      [
+        'release',
+        'download',
+        `v${check.latest}`,
+        '--repo',
+        REPO,
+        '--pattern',
+        check.asset,
+        '--output',
+        dest,
+        '--clobber',
+      ],
+      { timeout: DOWNLOAD_TIMEOUT, windowsHide: true }
+    )
   }
 }
 
@@ -106,7 +248,7 @@ async function applyUpdate(report = () => {}) {
     applying = false
     return { ok: false, reason: `Already on the newest version (${check.current})` }
   }
-  if (!check.asset) {
+  if (!check.asset || !check.assetId) {
     applying = false
     return { ok: false, reason: `Release v${check.latest} has no Windows setup asset` }
   }
@@ -114,29 +256,9 @@ async function applyUpdate(report = () => {}) {
   const dir = path.join(app.getPath('temp'), `subzer0-update-${check.latest}`)
   const setup = path.join(dir, check.asset)
   try {
-    await fsp.rm(dir, { recursive: true, force: true })
     await fsp.mkdir(dir, { recursive: true })
 
-    report(`Downloading subzer0 ${check.latest}…`)
-    // Download to the exe path itself: handing gh an existing directory makes
-    // it treat the folder as a clashing file. --clobber keeps retries clean.
-    await run(
-      'gh',
-      [
-        'release',
-        'download',
-        `v${check.latest}`,
-        '--repo',
-        REPO,
-        '--pattern',
-        check.asset,
-        '--output',
-        setup,
-        '--clobber',
-      ],
-      { timeout: DOWNLOAD_TIMEOUT, windowsHide: true }
-    )
-
+    await downloadRelease(check, setup, report)
     await fsp.access(setup)
 
     report('Installing — the app will restart…')
