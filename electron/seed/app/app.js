@@ -53,11 +53,12 @@ const el = {
   cmdMenu: document.getElementById('cmdMenu'),
   custom: document.getElementById('custom'),
   updateBtn: document.getElementById('updateBtn'),
+  language: document.getElementById('language'),
 }
 
 const THEMES = [
-  { id: 'dark', name: 'dark', bg: '#000000', line: '#232323', accent: '#c9c9c9' },
-  { id: 'light', name: 'light', bg: '#fafafa', line: '#e4e4e4', accent: '#1a1a1a' },
+  { id: 'dark', nameKey: 'dark', bg: '#000000', line: '#232323', accent: '#c9c9c9' },
+  { id: 'light', nameKey: 'light', bg: '#fafafa', line: '#e4e4e4', accent: '#1a1a1a' },
 ]
 
 const ACCENTS = [
@@ -70,8 +71,8 @@ const ACCENTS = [
 ]
 
 const DENSITIES = [
-  { id: 'comfortable', name: 'cozy' },
-  { id: 'compact', name: 'compact' },
+  { id: 'comfortable', nameKey: 'cozy' },
+  { id: 'compact', nameKey: 'compactName' },
 ]
 
 const FONT_SIZES = [
@@ -81,11 +82,11 @@ const FONT_SIZES = [
 ]
 
 const PERSONAS = [
-  { id: 'casual', name: 'casual', note: 'relaxed and friendly', prompt: 'be casual, warm, and friendly. use plain, relaxed language with occasional light humor.' },
-  { id: 'serious', name: 'serious', note: 'formal and precise', prompt: 'be serious, formal, and precise. no jokes, no slang, no emoji.' },
-  { id: 'funny', name: 'funny', note: 'witty and playful', prompt: 'be witty and playful. crack jokes and keep the tone light and entertaining.' },
-  { id: 'concise', name: 'concise', note: 'brief and direct', prompt: 'be brief and direct. short answers, no filler or preamble.' },
-  { id: 'balanced', name: 'balanced', note: 'no persona', prompt: '' },
+  { id: 'casual', name: 'casual', noteKey: 'personaCasual', prompt: 'be casual, warm, and friendly. use plain, relaxed language with occasional light humor.' },
+  { id: 'serious', name: 'serious', noteKey: 'personaSerious', prompt: 'be serious, formal, and precise. no jokes, no slang, no emoji.' },
+  { id: 'funny', name: 'funny', noteKey: 'personaFunny', prompt: 'be witty and playful. crack jokes and keep the tone light and entertaining.' },
+  { id: 'concise', name: 'concise', noteKey: 'personaConcise', prompt: 'be brief and direct. short answers, no filler or preamble.' },
+  { id: 'balanced', name: 'balanced', noteKey: 'personaOff', prompt: '' },
 ]
 
 const PERSONALITY_KEY = 'subzer0.personality'
@@ -94,6 +95,1427 @@ const COMPACT_KEY = 'subzer0.compact'
 const CUSTOM_KEY = 'subzer0.custom'
 const CLEARED_KEY = 'subzer0.cleared'
 const COMMANDS = ['persona', 'effort', 'model', 'version', 'compact', 'clear']
+
+/* --------------------------------------------------------------- languages */
+
+const LANGUAGES = [
+  { id: 'en', name: 'english' },
+  { id: 'ru', name: 'русский' },
+  { id: 'de', name: 'deutsch' },
+  { id: 'es', name: 'español' },
+  { id: 'fr', name: 'français' },
+  { id: 'pt', name: 'português' },
+  { id: 'it', name: 'italiano' },
+  { id: 'nl', name: 'nederlands' },
+  { id: 'pl', name: 'polski' },
+  { id: 'tr', name: 'türkçe' },
+  { id: 'uk', name: 'українська' },
+  { id: 'zh', name: '中文' },
+]
+
+const MESSAGES = {
+  newChat: {
+    en: 'new chat',
+    ru: 'новый чат',
+    de: 'neuer chat',
+    es: 'nuevo chat',
+    fr: 'nouvelle discussion',
+    pt: 'nova conversa',
+    it: 'nuova chat',
+    nl: 'nieuwe chat',
+    pl: 'nowy czat',
+    tr: 'yeni sohbet',
+    uk: 'новий чат',
+    zh: '新对话',
+  },
+  recent: {
+    en: 'recent',
+    ru: 'недавние',
+    de: 'zuletzt',
+    es: 'recientes',
+    fr: 'récents',
+    pt: 'recentes',
+    it: 'recenti',
+    nl: 'recent',
+    pl: 'ostatnie',
+    tr: 'son',
+    uk: 'нещодавні',
+    zh: '最近',
+  },
+  clearAll: {
+    en: 'clear all',
+    ru: 'очистить всё',
+    de: 'alle löschen',
+    es: 'borrar todo',
+    fr: 'tout effacer',
+    pt: 'limpar tudo',
+    it: 'cancella tutto',
+    nl: 'alles wissen',
+    pl: 'wyczyść wszystko',
+    tr: 'tümünü temizle',
+    uk: 'очистити все',
+    zh: '全部清除',
+  },
+  confirmClear: {
+    en: 'sure? tap again',
+    ru: 'точно? нажми ещё',
+    de: 'sicher? nochmal tippen',
+    es: '¿seguro? pulsa otra vez',
+    fr: 'sûr ? appuie encore',
+    pt: 'certeza? toque de novo',
+    it: 'sicuro? tocca ancora',
+    nl: 'zeker? nog eens tikken',
+    pl: 'pewien? kliknij ponownie',
+    tr: 'emin misin? tekrar bas',
+    uk: 'точно? натисни ще раз',
+    zh: '确定？再点一次',
+  },
+  noChats: {
+    en: 'no conversations yet',
+    ru: 'пока нет разговоров',
+    de: 'noch keine unterhaltungen',
+    es: 'aún no hay conversaciones',
+    fr: 'aucune discussion',
+    pt: 'nenhuma conversa ainda',
+    it: 'nessuna conversazione',
+    nl: 'nog geen gesprekken',
+    pl: 'brak rozmów',
+    tr: 'henüz sohbet yok',
+    uk: 'розмов ще немає',
+    zh: '还没有对话',
+  },
+  settingsTitle: {
+    en: 'settings',
+    ru: 'настройки',
+    de: 'einstellungen',
+    es: 'ajustes',
+    fr: 'réglages',
+    pt: 'ajustes',
+    it: 'impostazioni',
+    nl: 'instellingen',
+    pl: 'ustawienia',
+    tr: 'ayarlar',
+    uk: 'налаштування',
+    zh: '设置',
+  },
+  modelTitle: {
+    en: 'model',
+    ru: 'модель',
+    de: 'modell',
+    es: 'modelo',
+    fr: 'modèle',
+    pt: 'modelo',
+    it: 'modello',
+    nl: 'model',
+    pl: 'model',
+    tr: 'model',
+    uk: 'модель',
+    zh: '模型',
+  },
+  personalityTitle: {
+    en: 'personality',
+    ru: 'характер',
+    de: 'persönlichkeit',
+    es: 'personalidad',
+    fr: 'personnalité',
+    pt: 'personalidade',
+    it: 'personalità',
+    nl: 'persoonlijkheid',
+    pl: 'osobowość',
+    tr: 'kişilik',
+    uk: 'характер',
+    zh: '风格',
+  },
+  reasoningTitle: {
+    en: 'reasoning',
+    ru: 'размышления',
+    de: 'denkaufwand',
+    es: 'razonamiento',
+    fr: 'raisonnement',
+    pt: 'raciocínio',
+    it: 'ragionamento',
+    nl: 'redeneren',
+    pl: 'rozumowanie',
+    tr: 'düşünme',
+    uk: 'роздуми',
+    zh: '推理',
+  },
+  appearanceTitle: {
+    en: 'appearance',
+    ru: 'вид',
+    de: 'aussehen',
+    es: 'apariencia',
+    fr: 'apparence',
+    pt: 'aparência',
+    it: 'aspetto',
+    nl: 'weergave',
+    pl: 'wygląd',
+    tr: 'görünüm',
+    uk: 'вигляд',
+    zh: '外观',
+  },
+  accent: {
+    en: 'accent',
+    ru: 'акцент',
+    de: 'akzent',
+    es: 'acento',
+    fr: 'accent',
+    pt: 'destaque',
+    it: 'accento',
+    nl: 'accent',
+    pl: 'akcent',
+    tr: 'vurgu',
+    uk: 'акцент',
+    zh: '强调色',
+  },
+  density: {
+    en: 'density',
+    ru: 'плотность',
+    de: 'dichte',
+    es: 'densidad',
+    fr: 'densité',
+    pt: 'densidade',
+    it: 'densità',
+    nl: 'dichtheid',
+    pl: 'gęstość',
+    tr: 'yoğunluk',
+    uk: 'щільність',
+    zh: '密度',
+  },
+  textSize: {
+    en: 'text size',
+    ru: 'размер текста',
+    de: 'textgröße',
+    es: 'tamaño del texto',
+    fr: 'taille du texte',
+    pt: 'tamanho do texto',
+    it: 'dimensione testo',
+    nl: 'tekstgrootte',
+    pl: 'rozmiar tekstu',
+    tr: 'yazı boyutu',
+    uk: 'розмір тексту',
+    zh: '字号',
+  },
+  chatTitle: {
+    en: 'chat',
+    ru: 'чат',
+    de: 'chat',
+    es: 'chat',
+    fr: 'chat',
+    pt: 'chat',
+    it: 'chat',
+    nl: 'chat',
+    pl: 'czat',
+    tr: 'sohbet',
+    uk: 'чат',
+    zh: '对话',
+  },
+  languageTitle: {
+    en: 'language',
+    ru: 'язык',
+    de: 'sprache',
+    es: 'idioma',
+    fr: 'langue',
+    pt: 'idioma',
+    it: 'lingua',
+    nl: 'taal',
+    pl: 'język',
+    tr: 'dil',
+    uk: 'мова',
+    zh: '语言',
+  },
+  languageNote: {
+    en: 'ui language',
+    ru: 'язык интерфейса',
+    de: 'sprache der oberfläche',
+    es: 'idioma de la interfaz',
+    fr: "langue de l'interface",
+    pt: 'idioma da interface',
+    it: "lingua dell'interfaccia",
+    nl: 'taal van de app',
+    pl: 'język interfejsu',
+    tr: 'arayüz dili',
+    uk: 'мова інтерфейсу',
+    zh: '界面语言',
+  },
+  tokenCounter: {
+    en: 'token counter',
+    ru: 'счётчик токенов',
+    de: 'token-zähler',
+    es: 'contador de tokens',
+    fr: 'compteur de tokens',
+    pt: 'contador de tokens',
+    it: 'contatore token',
+    nl: 'tokenteller',
+    pl: 'licznik tokenów',
+    tr: 'token sayacı',
+    uk: 'лічильник токенів',
+    zh: 'token 计数',
+  },
+  tokenBudget: {
+    en: 'token budget',
+    ru: 'лимит токенов',
+    de: 'token-budget',
+    es: 'límite de tokens',
+    fr: 'budget de tokens',
+    pt: 'limite de tokens',
+    it: 'budget token',
+    nl: 'tokenbudget',
+    pl: 'limit tokenów',
+    tr: 'token bütçesi',
+    uk: 'ліміт токенів',
+    zh: 'token 上限',
+  },
+  customPlaceholder: {
+    en: 'custom instructions — always do this…',
+    ru: 'свои инструкции — делай всегда…',
+    de: 'eigene anweisungen — immer befolgen…',
+    es: 'instrucciones propias — hazlo siempre…',
+    fr: 'instructions perso — toujours faire…',
+    pt: 'instruções próprias — sempre faça…',
+    it: 'istruzioni personali — fai sempre…',
+    nl: 'eigen instructies — altijd doen…',
+    pl: 'własne instrukcje — zawsze rób…',
+    tr: 'özel talimatlar — her zaman yap…',
+    uk: 'власні інструкції — роби завжди…',
+    zh: '自定义指令 — 每次都执行…',
+  },
+  searchModels: {
+    en: 'search models',
+    ru: 'поиск моделей',
+    de: 'modelle suchen',
+    es: 'buscar modelos',
+    fr: 'chercher un modèle',
+    pt: 'buscar modelos',
+    it: 'cerca modelli',
+    nl: 'modellen zoeken',
+    pl: 'szukaj modeli',
+    tr: 'model ara',
+    uk: 'пошук моделей',
+    zh: '搜索模型',
+  },
+  loading: {
+    en: 'loading…',
+    ru: 'загрузка…',
+    de: 'lädt…',
+    es: 'cargando…',
+    fr: 'chargement…',
+    pt: 'carregando…',
+    it: 'caricamento…',
+    nl: 'laden…',
+    pl: 'ładowanie…',
+    tr: 'yükleniyor…',
+    uk: 'завантаження…',
+    zh: '加载中…',
+  },
+  noModels: {
+    en: 'no models available.',
+    ru: 'моделей нет.',
+    de: 'keine modelle verfügbar.',
+    es: 'no hay modelos.',
+    fr: 'aucun modèle.',
+    pt: 'nenhum modelo.',
+    it: 'nessun modello.',
+    nl: 'geen modellen.',
+    pl: 'brak modeli.',
+    tr: 'model yok.',
+    uk: 'моделей немає.',
+    zh: '没有可用模型。',
+  },
+  noMatch: {
+    en: 'no model matches “{q}”.',
+    ru: 'нет модели «{q}».',
+    de: 'kein modell für „{q}“.',
+    es: 'ningún modelo coincide con «{q}».',
+    fr: 'aucun modèle pour « {q} ».',
+    pt: 'nenhum modelo para «{q}».',
+    it: 'nessun modello per «{q}».',
+    nl: 'geen model voor ‘{q}’.',
+    pl: 'brak modelu „{q}”.',
+    tr: '«{q}» ile eşleşen model yok.',
+    uk: 'немає моделі «{q}».',
+    zh: '没有匹配“{q}”的模型。',
+  },
+  ofModels: {
+    en: '{n} of {total}',
+    ru: '{n} из {total}',
+    de: '{n} von {total}',
+    es: '{n} de {total}',
+    fr: '{n} sur {total}',
+    pt: '{n} de {total}',
+    it: '{n} di {total}',
+    nl: '{n} van {total}',
+    pl: '{n} z {total}',
+    tr: '{total} modelden {n}',
+    uk: '{n} з {total}',
+    zh: '{n} / {total}',
+  },
+  dark: {
+    en: 'dark',
+    ru: 'тёмная',
+    de: 'dunkel',
+    es: 'oscuro',
+    fr: 'sombre',
+    pt: 'escuro',
+    it: 'scuro',
+    nl: 'donker',
+    pl: 'ciemny',
+    tr: 'koyu',
+    uk: 'темна',
+    zh: '深色',
+  },
+  light: {
+    en: 'light',
+    ru: 'светлая',
+    de: 'hell',
+    es: 'claro',
+    fr: 'clair',
+    pt: 'claro',
+    it: 'chiaro',
+    nl: 'licht',
+    pl: 'jasny',
+    tr: 'açık',
+    uk: 'світла',
+    zh: '浅色',
+  },
+  cozy: {
+    en: 'cozy',
+    ru: 'уютно',
+    de: 'locker',
+    es: 'cómodo',
+    fr: 'confort',
+    pt: 'conforto',
+    it: 'comodo',
+    nl: 'ruim',
+    pl: 'luźno',
+    tr: 'rahat',
+    uk: 'затишно',
+    zh: '宽松',
+  },
+  compactName: {
+    en: 'compact',
+    ru: 'плотно',
+    de: 'kompakt',
+    es: 'compacto',
+    fr: 'compact',
+    pt: 'compacto',
+    it: 'compatto',
+    nl: 'compact',
+    pl: 'ciasno',
+    tr: 'sıkı',
+    uk: 'щільно',
+    zh: '紧凑',
+  },
+  auto: {
+    en: 'auto',
+    ru: 'авто',
+    de: 'auto',
+    es: 'auto',
+    fr: 'auto',
+    pt: 'auto',
+    it: 'auto',
+    nl: 'auto',
+    pl: 'auto',
+    tr: 'oto',
+    uk: 'авто',
+    zh: '自动',
+  },
+  notSupported: {
+    en: 'not supported by this model',
+    ru: 'модель не поддерживает',
+    de: 'von diesem modell nicht unterstützt',
+    es: 'no compatible con este modelo',
+    fr: 'non pris en charge',
+    pt: 'não suportado',
+    it: 'non supportato',
+    nl: 'niet ondersteund',
+    pl: 'nieobsługiwane',
+    tr: 'desteklenmiyor',
+    uk: 'не підтримується',
+    zh: '此模型不支持',
+  },
+  inputPlaceholder: {
+    en: 'tell me what to change…',
+    ru: 'скажи, что изменить…',
+    de: 'sag, was ich ändern soll…',
+    es: 'dime qué cambiar…',
+    fr: 'dis-moi quoi changer…',
+    pt: 'diga o que mudar…',
+    it: 'dimmi cosa cambiare…',
+    nl: 'zeg wat ik moet wijzigen…',
+    pl: 'powiedz, co zmienić…',
+    tr: 'neyi değiştireyim…',
+    uk: 'скажи, що змінити…',
+    zh: '告诉我要改什么…',
+  },
+  introTitle: {
+    en: 'what are we building?',
+    ru: 'что строим?',
+    de: 'was bauen wir?',
+    es: '¿qué construimos?',
+    fr: 'on construit quoi ?',
+    pt: 'o que vamos criar?',
+    it: 'cosa costruiamo?',
+    nl: 'wat bouwen we?',
+    pl: 'co budujemy?',
+    tr: 'ne inşa ediyoruz?',
+    uk: 'що будуємо?',
+    zh: '我们要做什么？',
+  },
+  introLine: {
+    en: 'type what you want and {model} will change it right here — layout, colors, whatever.',
+    ru: 'напиши, что хочешь, и {model} изменит всё прямо здесь — вёрстку, цвета, что угодно.',
+    de: 'sag, was du willst, und {model} ändert es direkt hier — layout, farben, egal.',
+    es: 'escribe lo que quieres y {model} lo cambiará aquí mismo — diseño, colores, lo que sea.',
+    fr: 'écris ce que tu veux et {model} le change ici — mise en page, couleurs, tout.',
+    pt: 'escreva o que quer e {model} muda aqui mesmo — layout, cores, tudo.',
+    it: 'scrivi cosa vuoi e {model} lo cambia qui — layout, colori, tutto.',
+    nl: 'typ wat je wilt en {model} past het hier aan — layout, kleuren, maakt niet uit.',
+    pl: 'napisz, czego chcesz, a {model} zmieni to tutaj — układ, kolory, cokolwiek.',
+    tr: 'ne istediğini yaz, {model} burada değiştirsin — düzen, renkler, ne olursa.',
+    uk: 'напиши, що хочеш, і {model} змінить усе тут — верстку, кольори, будь-що.',
+    zh: '写下你的想法，{model} 会直接在这里改 — 布局、颜色，随便什么。',
+  },
+  examples: {
+    en: 'examples:',
+    ru: 'примеры:',
+    de: 'beispiele:',
+    es: 'ejemplos:',
+    fr: 'exemples :',
+    pt: 'exemplos:',
+    it: 'esempi:',
+    nl: 'voorbeelden:',
+    pl: 'przykłady:',
+    tr: 'örnekler:',
+    uk: 'приклади:',
+    zh: '示例：',
+  },
+  hintSidebar: {
+    en: 'give it a sidebar',
+    ru: 'добавь боковую панель',
+    de: 'gib ihm eine seitenleiste',
+    es: 'añade una barra lateral',
+    fr: 'ajoute une barre latérale',
+    pt: 'adicione uma barra lateral',
+    it: 'aggiungi una barra laterale',
+    nl: 'geef het een zijbalk',
+    pl: 'dodaj panel boczny',
+    tr: 'kenar çubuğu ekle',
+    uk: 'додай бічну панель',
+    zh: '加一个侧边栏',
+  },
+  hintTerminal: {
+    en: 'make it feel like a terminal',
+    ru: 'сделай как терминал',
+    de: 'mach es wie ein terminal',
+    es: 'hazlo como una terminal',
+    fr: 'rends-le comme un terminal',
+    pt: 'deixe como um terminal',
+    it: 'fallo sembrare un terminale',
+    nl: 'maak het als een terminal',
+    pl: 'zrób jak terminal',
+    tr: 'terminal gibi yap',
+    uk: 'зроби як термінал',
+    zh: '让它像终端',
+  },
+  hintNotes: {
+    en: 'add a notes panel',
+    ru: 'добавь панель заметок',
+    de: 'füge ein notizpanel hinzu',
+    es: 'añade un panel de notas',
+    fr: 'ajoute un panneau de notes',
+    pt: 'adicione um painel de notas',
+    it: 'aggiungi un pannello note',
+    nl: 'voeg een notitiepaneel toe',
+    pl: 'dodaj panel notatek',
+    tr: 'not paneli ekle',
+    uk: 'додай панель нотаток',
+    zh: '加一个笔记面板',
+  },
+  thoughts: {
+    en: 'thoughts',
+    ru: 'мысли',
+    de: 'gedanken',
+    es: 'ideas',
+    fr: 'pensées',
+    pt: 'ideias',
+    it: 'pensieri',
+    nl: 'gedachten',
+    pl: 'myśli',
+    tr: 'düşünceler',
+    uk: 'думки',
+    zh: '思考',
+  },
+  showThoughts: {
+    en: 'show thoughts',
+    ru: 'показать мысли',
+    de: 'gedanken zeigen',
+    es: 'mostrar ideas',
+    fr: 'afficher les pensées',
+    pt: 'mostrar ideias',
+    it: 'mostra pensieri',
+    nl: 'gedachten tonen',
+    pl: 'pokaż myśli',
+    tr: 'düşünceleri göster',
+    uk: 'показати думки',
+    zh: '显示思考',
+  },
+  hideThoughts: {
+    en: 'hide thoughts',
+    ru: 'скрыть мысли',
+    de: 'gedanken verbergen',
+    es: 'ocultar ideas',
+    fr: 'masquer les pensées',
+    pt: 'ocultar ideias',
+    it: 'nascondi pensieri',
+    nl: 'gedachten verbergen',
+    pl: 'ukryj myśli',
+    tr: 'düşünceleri gizle',
+    uk: 'сховати думки',
+    zh: '隐藏思考',
+  },
+  thinking: {
+    en: 'thinking',
+    ru: 'думаю',
+    de: 'denke',
+    es: 'pensando',
+    fr: 'réflexion',
+    pt: 'pensando',
+    it: 'penso',
+    nl: 'denken',
+    pl: 'myślę',
+    tr: 'düşünüyor',
+    uk: 'думаю',
+    zh: '思考中',
+  },
+  copy: {
+    en: 'copy',
+    ru: 'копировать',
+    de: 'kopieren',
+    es: 'copiar',
+    fr: 'copier',
+    pt: 'copiar',
+    it: 'copia',
+    nl: 'kopiëren',
+    pl: 'kopiuj',
+    tr: 'kopyala',
+    uk: 'копіювати',
+    zh: '复制',
+  },
+  copied: {
+    en: 'copied',
+    ru: 'скопировано',
+    de: 'kopiert',
+    es: 'copiado',
+    fr: 'copié',
+    pt: 'copiado',
+    it: 'copiato',
+    nl: 'gekopieerd',
+    pl: 'skopiowano',
+    tr: 'kopyalandı',
+    uk: 'скопійовано',
+    zh: '已复制',
+  },
+  chooseModel: {
+    en: 'choose a model',
+    ru: 'выбрать модель',
+    de: 'modell wählen',
+    es: 'elegir modelo',
+    fr: 'choisir un modèle',
+    pt: 'escolher modelo',
+    it: 'scegli modello',
+    nl: 'model kiezen',
+    pl: 'wybierz model',
+    tr: 'model seç',
+    uk: 'вибрати модель',
+    zh: '选择模型',
+  },
+  used: {
+    en: 'used',
+    ru: 'использовано',
+    de: 'verbraucht',
+    es: 'usados',
+    fr: 'utilisés',
+    pt: 'usados',
+    it: 'usati',
+    nl: 'gebruikt',
+    pl: 'użyto',
+    tr: 'kullanıldı',
+    uk: 'використано',
+    zh: '已用',
+  },
+  left: {
+    en: 'left',
+    ru: 'осталось',
+    de: 'übrig',
+    es: 'restantes',
+    fr: 'restants',
+    pt: 'restantes',
+    it: 'rimasti',
+    nl: 'over',
+    pl: 'zostało',
+    tr: 'kaldı',
+    uk: 'залишилось',
+    zh: '剩余',
+  },
+  percentOf: {
+    en: '{pct}% of {budget}',
+    ru: '{pct}% из {budget}',
+    de: '{pct}% von {budget}',
+    es: '{pct}% de {budget}',
+    fr: '{pct}% sur {budget}',
+    pt: '{pct}% de {budget}',
+    it: '{pct}% di {budget}',
+    nl: '{pct}% van {budget}',
+    pl: '{pct}% z {budget}',
+    tr: '{budget} içinde %{pct}',
+    uk: '{pct}% з {budget}',
+    zh: '占 {budget} 的 {pct}%',
+  },
+  offline: {
+    en: 'ai offline',
+    ru: 'ии офлайн',
+    de: 'ki offline',
+    es: 'ia sin conexión',
+    fr: 'ia hors ligne',
+    pt: 'ia offline',
+    it: 'ia offline',
+    nl: 'ai offline',
+    pl: 'ai offline',
+    tr: 'yapay zeka çevrimdışı',
+    uk: 'іі офлайн',
+    zh: 'ai 离线',
+  },
+  spend: {
+    en: 'spent this conversation · {cost}',
+    ru: 'потрачено в этом чате · {cost}',
+    de: 'in diesem chat ausgegeben · {cost}',
+    es: 'gastado en este chat · {cost}',
+    fr: 'dépensé ici · {cost}',
+    pt: 'gasto nesta conversa · {cost}',
+    it: 'speso in questa chat · {cost}',
+    nl: 'uitgegeven in dit gesprek · {cost}',
+    pl: 'wydano w tej rozmowie · {cost}',
+    tr: 'bu sohbette harcanan · {cost}',
+    uk: 'витрачено в цьому чаті · {cost}',
+    zh: '本对话花费 · {cost}',
+  },
+  notesTitle: {
+    en: 'notes',
+    ru: 'заметки',
+    de: 'notizen',
+    es: 'notas',
+    fr: 'notes',
+    pt: 'notas',
+    it: 'note',
+    nl: 'notities',
+    pl: 'notatki',
+    tr: 'notlar',
+    uk: 'нотатки',
+    zh: '笔记',
+  },
+  notePlaceholder: {
+    en: 'jot a note…',
+    ru: 'запиши заметку…',
+    de: 'notiz notieren…',
+    es: 'escribe una nota…',
+    fr: 'note rapide…',
+    pt: 'anote algo…',
+    it: 'scrivi una nota…',
+    nl: 'notitie maken…',
+    pl: 'zapisz notatkę…',
+    tr: 'not al…',
+    uk: 'запиши нотатку…',
+    zh: '记一笔…',
+  },
+  addNote: {
+    en: 'add note',
+    ru: 'добавить заметку',
+    de: 'notiz hinzufügen',
+    es: 'añadir nota',
+    fr: 'ajouter une note',
+    pt: 'adicionar nota',
+    it: 'aggiungi nota',
+    nl: 'notitie toevoegen',
+    pl: 'dodaj notatkę',
+    tr: 'not ekle',
+    uk: 'додати нотатку',
+    zh: '添加笔记',
+  },
+  addToComposer: {
+    en: 'add to the composer',
+    ru: 'в поле ввода',
+    de: 'in den eingabebereich',
+    es: 'al campo de texto',
+    fr: 'vers la saisie',
+    pt: 'para o campo',
+    it: 'nel campo',
+    nl: 'naar het invoerveld',
+    pl: 'do pola tekstowego',
+    tr: 'giriş alanına',
+    uk: 'у поле вводу',
+    zh: '放入输入框',
+  },
+  noNotes: {
+    en: 'no notes yet',
+    ru: 'пока нет заметок',
+    de: 'noch keine notizen',
+    es: 'aún no hay notas',
+    fr: 'aucune note',
+    pt: 'nenhuma nota',
+    it: 'nessuna nota',
+    nl: 'nog geen notities',
+    pl: 'brak notatek',
+    tr: 'henüz not yok',
+    uk: 'нотаток ще немає',
+    zh: '还没有笔记',
+  },
+  showNotes: {
+    en: 'show notes',
+    ru: 'показать заметки',
+    de: 'notizen zeigen',
+    es: 'mostrar notas',
+    fr: 'afficher les notes',
+    pt: 'mostrar notas',
+    it: 'mostra note',
+    nl: 'notities tonen',
+    pl: 'pokaż notatki',
+    tr: 'notları göster',
+    uk: 'показати нотатки',
+    zh: '显示笔记',
+  },
+  hideNotes: {
+    en: 'hide notes',
+    ru: 'скрыть заметки',
+    de: 'notizen verbergen',
+    es: 'ocultar notas',
+    fr: 'masquer les notes',
+    pt: 'ocultar notas',
+    it: 'nascondi note',
+    nl: 'notities verbergen',
+    pl: 'ukryj notatki',
+    tr: 'notları gizle',
+    uk: 'сховати нотатки',
+    zh: '隐藏笔记',
+  },
+  deleteNote: {
+    en: 'delete note',
+    ru: 'удалить заметку',
+    de: 'notiz löschen',
+    es: 'borrar nota',
+    fr: 'supprimer la note',
+    pt: 'apagar nota',
+    it: 'elimina nota',
+    nl: 'notitie verwijderen',
+    pl: 'usuń notatkę',
+    tr: 'notu sil',
+    uk: 'видалити нотатку',
+    zh: '删除笔记',
+  },
+  deleteChat: {
+    en: 'delete conversation',
+    ru: 'удалить разговор',
+    de: 'unterhaltung löschen',
+    es: 'borrar conversación',
+    fr: 'supprimer la discussion',
+    pt: 'apagar conversa',
+    it: 'elimina conversazione',
+    nl: 'gesprek verwijderen',
+    pl: 'usuń rozmowę',
+    tr: 'sohbeti sil',
+    uk: 'видалити розмову',
+    zh: '删除对话',
+  },
+  send: {
+    en: 'send',
+    ru: 'отправить',
+    de: 'senden',
+    es: 'enviar',
+    fr: 'envoyer',
+    pt: 'enviar',
+    it: 'invia',
+    nl: 'versturen',
+    pl: 'wyślij',
+    tr: 'gönder',
+    uk: 'надіслати',
+    zh: '发送',
+  },
+  stop: {
+    en: 'stop',
+    ru: 'стоп',
+    de: 'stopp',
+    es: 'detener',
+    fr: 'arrêter',
+    pt: 'parar',
+    it: 'ferma',
+    nl: 'stop',
+    pl: 'stop',
+    tr: 'durdur',
+    uk: 'стоп',
+    zh: '停止',
+  },
+  sendHint: {
+    en: 'send (enter)',
+    ru: 'отправить (enter)',
+    de: 'senden (enter)',
+    es: 'enviar (enter)',
+    fr: 'envoyer (entrée)',
+    pt: 'enviar (enter)',
+    it: 'invia (invio)',
+    nl: 'versturen (enter)',
+    pl: 'wyślij (enter)',
+    tr: 'gönder (enter)',
+    uk: 'надіслати (enter)',
+    zh: '发送（回车）',
+  },
+  updateLabel: {
+    en: 'update',
+    ru: 'обновить',
+    de: 'aktualisieren',
+    es: 'actualizar',
+    fr: 'mettre à jour',
+    pt: 'atualizar',
+    it: 'aggiorna',
+    nl: 'bijwerken',
+    pl: 'zaktualizuj',
+    tr: 'güncelle',
+    uk: 'оновити',
+    zh: '更新',
+  },
+  updateTo: {
+    en: 'update to v{v}',
+    ru: 'обновить до v{v}',
+    de: 'aktualisieren auf v{v}',
+    es: 'actualizar a v{v}',
+    fr: 'mettre à jour vers v{v}',
+    pt: 'atualizar para v{v}',
+    it: 'aggiorna a v{v}',
+    nl: 'bijwerken naar v{v}',
+    pl: 'zaktualizuj do v{v}',
+    tr: 'v{v} sürümüne güncelle',
+    uk: 'оновити до v{v}',
+    zh: '更新到 v{v}',
+  },
+  downloading: {
+    en: 'downloading…',
+    ru: 'загрузка…',
+    de: 'lädt herunter…',
+    es: 'descargando…',
+    fr: 'téléchargement…',
+    pt: 'baixando…',
+    it: 'download…',
+    nl: 'downloaden…',
+    pl: 'pobieranie…',
+    tr: 'indiriliyor…',
+    uk: 'завантаження…',
+    zh: '下载中…',
+  },
+  installing: {
+    en: 'installing — the app will restart…',
+    ru: 'установка — приложение перезапустится…',
+    de: 'installation — app startet neu…',
+    es: 'instalando — la app se reiniciará…',
+    fr: "installation — l'app redémarre…",
+    pt: 'instalando — o app vai reiniciar…',
+    it: "installazione — l'app si riavvia…",
+    nl: 'installeren — app start opnieuw…',
+    pl: 'instalowanie — aplikacja się uruchomi ponownie…',
+    tr: 'kuruluyor — uygulama yeniden başlayacak…',
+    uk: 'встановлення — застосунок перезапуститься…',
+    zh: '安装中 — 应用将重启…',
+  },
+  updateFailed: {
+    en: 'update failed',
+    ru: 'обновление не удалось',
+    de: 'update fehlgeschlagen',
+    es: 'error al actualizar',
+    fr: 'échec de la mise à jour',
+    pt: 'falha na atualização',
+    it: 'aggiornamento non riuscito',
+    nl: 'bijwerken mislukt',
+    pl: 'aktualizacja nieudana',
+    tr: 'güncelleme başarısız',
+    uk: 'оновлення не вдалося',
+    zh: '更新失败',
+  },
+  downloadingPct: {
+    en: 'downloading {pct}%',
+    ru: 'загружено {pct}%',
+    de: 'lädt {pct}%',
+    es: 'descargando {pct}%',
+    fr: 'téléchargement {pct}%',
+    pt: 'baixando {pct}%',
+    it: 'download {pct}%',
+    nl: 'downloaden {pct}%',
+    pl: 'pobieranie {pct}%',
+    tr: 'indiriliyor %{pct}',
+    uk: 'завантаження {pct}%',
+    zh: '下载中 {pct}%',
+  },
+  free: {
+    en: 'free',
+    ru: 'бесплатно',
+    de: 'kostenlos',
+    es: 'gratis',
+    fr: 'gratuit',
+    pt: 'grátis',
+    it: 'gratis',
+    nl: 'gratis',
+    pl: 'darmowe',
+    tr: 'ücretsiz',
+    uk: 'безкоштовно',
+    zh: '免费',
+  },
+  goName: {
+    en: 'opencode go',
+    ru: 'opencode go',
+    de: 'opencode go',
+    es: 'opencode go',
+    fr: 'opencode go',
+    pt: 'opencode go',
+    it: 'opencode go',
+    nl: 'opencode go',
+    pl: 'opencode go',
+    tr: 'opencode go',
+    uk: 'opencode go',
+    zh: 'opencode go',
+  },
+  paidName: {
+    en: 'pay per token',
+    ru: 'за токены',
+    de: 'pro token',
+    es: 'por token',
+    fr: 'au token',
+    pt: 'por token',
+    it: 'a token',
+    nl: 'per token',
+    pl: 'za tokeny',
+    tr: 'token başına',
+    uk: 'за токени',
+    zh: '按 token',
+  },
+  freeHint: {
+    en: 'no subscription needed',
+    ru: 'подписка не нужна',
+    de: 'kein abo nötig',
+    es: 'sin suscripción',
+    fr: 'sans abonnement',
+    pt: 'sem assinatura',
+    it: 'senza abbonamento',
+    nl: 'geen abonnement',
+    pl: 'bez subskrypcji',
+    tr: 'abonelik gerekmez',
+    uk: 'підписка не потрібна',
+    zh: '无需订阅',
+  },
+  goActive: {
+    en: 'active on this account',
+    ru: 'активна в аккаунте',
+    de: 'im konto aktiv',
+    es: 'activa en la cuenta',
+    fr: 'active sur le compte',
+    pt: 'ativa na conta',
+    it: "attiva sull'account",
+    nl: 'actief op account',
+    pl: 'aktywna na koncie',
+    tr: 'hesapta etkin',
+    uk: 'активна в акаунті',
+    zh: '账户已开通',
+  },
+  goInactive: {
+    en: 'not active on this account',
+    ru: 'не активна в аккаунте',
+    de: 'im konto nicht aktiv',
+    es: 'no activa en la cuenta',
+    fr: 'pas active sur le compte',
+    pt: 'inativa na conta',
+    it: 'non attiva',
+    nl: 'niet actief',
+    pl: 'nieaktywna',
+    tr: 'hesapta etkin değil',
+    uk: 'не активна в акаунті',
+    zh: '账户未开通',
+  },
+  goHint: {
+    en: 'included in your subscription',
+    ru: 'входит в подписку',
+    de: 'in der subskription enthalten',
+    es: 'incluida en la suscripción',
+    fr: "inclus dans l'abonnement",
+    pt: 'incluído na assinatura',
+    it: "incluso nell'abbonamento",
+    nl: 'inbegrepen in abonnement',
+    pl: 'w ramach subskrypcji',
+    tr: 'aboneliğe dahil',
+    uk: 'входить у підписку',
+    zh: '订阅内包含',
+  },
+  paidHint: {
+    en: 'billed to your opencode balance',
+    ru: 'списывается с баланса opencode',
+    de: 'über opencode-guthaben',
+    es: 'se cobra del saldo',
+    fr: 'débité du solde opencode',
+    pt: 'cobrado do saldo',
+    it: 'addebitato sul saldo',
+    nl: 'van opencode-saldo',
+    pl: 'z salda opencode',
+    tr: 'opencode bakiyesinden',
+    uk: 'списується з балансу',
+    zh: '从 opencode 余额扣除',
+  },
+  metered: {
+    en: 'metered',
+    ru: 'по счётчику',
+    de: 'nach verbrauch',
+    es: 'medido',
+    fr: 'au compteur',
+    pt: 'medido',
+    it: 'a consumo',
+    nl: 'gemeten',
+    pl: 'licznikowo',
+    tr: 'ölçülü',
+    uk: 'за лічильником',
+    zh: '按量计费',
+  },
+  personaCasual: {
+    en: 'relaxed and friendly',
+    ru: 'спокойно и дружелюбно',
+    de: 'locker und freundlich',
+    es: 'relajado y amable',
+    fr: 'détendu et amical',
+    pt: 'tranquilo e amigável',
+    it: 'rilassato e amichevole',
+    nl: 'ontspannen en vriendelijk',
+    pl: 'swobodnie i życzliwie',
+    tr: 'rahat ve samimi',
+    uk: 'спокійно та дружньо',
+    zh: '轻松友好',
+  },
+  personaSerious: {
+    en: 'formal and precise',
+    ru: 'формально и точно',
+    de: 'formell und präzise',
+    es: 'formal y preciso',
+    fr: 'formel et précis',
+    pt: 'formal e preciso',
+    it: 'formale e preciso',
+    nl: 'formeel en precies',
+    pl: 'formalnie i precyzyjnie',
+    tr: 'resmi ve net',
+    uk: 'формально й точно',
+    zh: '正式精准',
+  },
+  personaFunny: {
+    en: 'witty and playful',
+    ru: 'остроумно и игриво',
+    de: 'witzig und verspielt',
+    es: 'ingenioso y juguetón',
+    fr: 'spirituel et joueur',
+    pt: 'espirituoso e brincalhão',
+    it: 'arguto e giocoso',
+    nl: 'geestig en speels',
+    pl: 'dowcipnie i zabawnie',
+    tr: 'esprili ve oyuncu',
+    uk: 'дотепно й грайливо',
+    zh: '机智俏皮',
+  },
+  personaConcise: {
+    en: 'brief and direct',
+    ru: 'кратко и прямо',
+    de: 'kurz und direkt',
+    es: 'breve y directo',
+    fr: 'bref et direct',
+    pt: 'breve e direto',
+    it: 'breve e diretto',
+    nl: 'kort en direct',
+    pl: 'krótko i wprost',
+    tr: 'kısa ve net',
+    uk: 'коротко й прямо',
+    zh: '简短直接',
+  },
+  personaOff: {
+    en: 'no persona',
+    ru: 'без характера',
+    de: 'keine persönlichkeit',
+    es: 'sin personalidad',
+    fr: 'sans personnalité',
+    pt: 'sem personalidade',
+    it: 'senza personalità',
+    nl: 'geen persoonlijkheid',
+    pl: 'bez osobowości',
+    tr: 'kişilik yok',
+    uk: 'без характеру',
+    zh: '无风格',
+  },
+  personaSet: {
+    en: 'persona set to {id}',
+    ru: 'характер: {id}',
+    de: 'persönlichkeit: {id}',
+    es: 'personalidad: {id}',
+    fr: 'personnalité : {id}',
+    pt: 'personalidade: {id}',
+    it: 'personalità: {id}',
+    nl: 'persoonlijkheid: {id}',
+    pl: 'osobowość: {id}',
+    tr: 'kişilik: {id}',
+    uk: 'характер: {id}',
+    zh: '风格：{id}',
+  },
+  personaUnknown: {
+    en: 'unknown persona · try {list}',
+    ru: 'нет такого характера · {list}',
+    de: 'unbekannt · {list}',
+    es: 'personalidad desconocida · {list}',
+    fr: 'inconnue · {list}',
+    pt: 'desconhecida · {list}',
+    it: 'sconosciuta · {list}',
+    nl: 'onbekend · {list}',
+    pl: 'nieznana · {list}',
+    tr: 'bilinmeyen · {list}',
+    uk: 'невідомий · {list}',
+    zh: '未知风格 · {list}',
+  },
+  effortSet: {
+    en: 'effort set to {id}',
+    ru: 'усилие: {id}',
+    de: 'aufwand: {id}',
+    es: 'esfuerzo: {id}',
+    fr: 'effort : {id}',
+    pt: 'esforço: {id}',
+    it: 'impegno: {id}',
+    nl: 'inspanning: {id}',
+    pl: 'wysiłek: {id}',
+    tr: 'çaba: {id}',
+    uk: 'зусилля: {id}',
+    zh: '强度：{id}',
+  },
+  modelSet: {
+    en: 'model set to {name}',
+    ru: 'модель: {name}',
+    de: 'modell: {name}',
+    es: 'modelo: {name}',
+    fr: 'modèle : {name}',
+    pt: 'modelo: {name}',
+    it: 'modello: {name}',
+    nl: 'model: {name}',
+    pl: 'model: {name}',
+    tr: 'model: {name}',
+    uk: 'модель: {name}',
+    zh: '模型：{name}',
+  },
+  noModelMatch: {
+    en: 'no model matches "{q}"',
+    ru: 'нет модели «{q}»',
+    de: 'kein modell „{q}“',
+    es: 'ningún modelo «{q}»',
+    fr: 'aucun modèle « {q} »',
+    pt: 'nenhum modelo «{q}»',
+    it: 'nessun modello «{q}»',
+    nl: 'geen model ‘{q}’',
+    pl: 'brak modelu „{q}”',
+    tr: '«{q}» yok',
+    uk: 'немає моделі «{q}»',
+    zh: '没有模型“{q}”',
+  },
+  compactOn: {
+    en: 'compact on',
+    ru: 'плотно вкл',
+    de: 'kompakt an',
+    es: 'compacto activado',
+    fr: 'compact activé',
+    pt: 'compacto ligado',
+    it: 'compatto attivo',
+    nl: 'compact aan',
+    pl: 'ciasno włączone',
+    tr: 'sıkı açık',
+    uk: 'щільно увімк',
+    zh: '紧凑已开',
+  },
+  compactOff: {
+    en: 'compact off',
+    ru: 'плотно выкл',
+    de: 'kompakt aus',
+    es: 'compacto desactivado',
+    fr: 'compact désactivé',
+    pt: 'compacto desligado',
+    it: 'compatto spento',
+    nl: 'compact uit',
+    pl: 'ciasno wyłączone',
+    tr: 'sıkı kapalı',
+    uk: 'щільно вимк',
+    zh: '紧凑已关',
+  },
+  chatCleared: {
+    en: 'chat cleared · context kept',
+    ru: 'чат очищен · контекст сохранён',
+    de: 'chat geleert · kontext bleibt',
+    es: 'chat borrado · contexto intacto',
+    fr: 'chat effacé · contexte gardé',
+    pt: 'chat limpo · contexto mantido',
+    it: 'chat pulita · contesto intatto',
+    nl: 'chat gewist · context blijft',
+    pl: 'czat wyczyszczony · kontekst został',
+    tr: 'sohbet temizlendi · bağlam korundu',
+    uk: 'чат очищено · контекст збережено',
+    zh: '对话已清空 · 上下文保留',
+  },
+  unknownCommand: {
+    en: 'unknown command · try ?persona ?effort ?model ?version ?compact ?clear',
+    ru: 'неизвестная команда · попробуй ?persona ?effort ?model ?version ?compact ?clear',
+    de: 'unbekannter befehl · ?persona ?effort ?model ?version ?compact ?clear',
+    es: 'comando desconocido · prueba ?persona ?effort ?model ?version ?compact ?clear',
+    fr: 'commande inconnue · essaie ?persona ?effort ?model ?version ?compact ?clear',
+    pt: 'comando desconhecido · tente ?persona ?effort ?model ?version ?compact ?clear',
+    it: 'comando sconosciuto · prova ?persona ?effort ?model ?version ?compact ?clear',
+    nl: 'onbekend commando · probeer ?persona ?effort ?model ?version ?compact ?clear',
+    pl: 'nieznana komenda · spróbuj ?persona ?effort ?model ?version ?compact ?clear',
+    tr: 'bilinmeyen komut · ?persona ?effort ?model ?version ?compact ?clear',
+    uk: 'невідома команда · спробуй ?persona ?effort ?model ?version ?compact ?clear',
+    zh: '未知命令 · 试试 ?persona ?effort ?model ?version ?compact ?clear',
+  },
+  noAi: {
+    en: 'this copy has no ai attached.',
+    ru: 'в этой копии нет ии.',
+    de: 'diese kopie hat keine ki.',
+    es: 'esta copia no tiene ia.',
+    fr: "cette copie n'a pas d'ia.",
+    pt: 'esta cópia não tem ia.',
+    it: 'questa copia non ha ia.',
+    nl: 'deze kopie heeft geen ai.',
+    pl: 'ta kopia nie ma ai.',
+    tr: 'bu kopyada yapay zeka yok.',
+    uk: 'у цій копії немає іі.',
+    zh: '此副本没有接入 ai。',
+  },
+  nowLabel: {
+    en: 'now',
+    ru: 'сейчас',
+    de: 'jetzt',
+    es: 'ahora',
+    fr: 'maintenant',
+    pt: 'agora',
+    it: 'ora',
+    nl: 'nu',
+    pl: 'teraz',
+    tr: 'şimdi',
+    uk: 'зараз',
+    zh: '刚刚',
+  },
+  changeModel: {
+    en: 'change model',
+    ru: 'сменить модель',
+    de: 'modell wechseln',
+    es: 'cambiar modelo',
+    fr: 'changer de modèle',
+    pt: 'mudar modelo',
+    it: 'cambia modello',
+    nl: 'model wijzigen',
+    pl: 'zmień model',
+    tr: 'modeli değiştir',
+    uk: 'змінити модель',
+    zh: '切换模型',
+  },
+  done: {
+    en: 'done',
+    ru: 'готово',
+    de: 'fertig',
+    es: 'listo',
+    fr: 'terminé',
+    pt: 'pronto',
+    it: 'fatto',
+    nl: 'klaar',
+    pl: 'gotowe',
+    tr: 'bitti',
+    uk: 'готово',
+    zh: '完成',
+  },
+  closeLabel: {
+    en: 'close',
+    ru: 'закрыть',
+    de: 'schließen',
+    es: 'cerrar',
+    fr: 'fermer',
+    pt: 'fechar',
+    it: 'chiudi',
+    nl: 'sluiten',
+    pl: 'zamknij',
+    tr: 'kapat',
+    uk: 'закрити',
+    zh: '关闭',
+  },
+}
+
+const LANGUAGE_KEY = 'subzer0.language'
+
+function loadLanguage() {
+  try {
+    const stored = window.localStorage.getItem(LANGUAGE_KEY)
+    return LANGUAGES.some((lang) => lang.id === stored) ? stored : 'en'
+  } catch {
+    return 'en'
+  }
+}
+
+function persistLanguage() {
+  try {
+    window.localStorage.setItem(LANGUAGE_KEY, language)
+  } catch {
+    /* memory-only is fine */
+  }
+}
+
+let language = loadLanguage()
+
+function t(key, vars) {
+  const entry = MESSAGES[key]
+  let text = (entry && (entry[language] ?? entry.en)) ?? key
+  if (vars) {
+    for (const [name, value] of Object.entries(vars)) {
+      text = text.split(`{${name}}`).join(String(value))
+    }
+  }
+  return text
+}
+
+function renderLanguageOptions() {
+  if (!el.language) return
+  const frag = document.createDocumentFragment()
+  for (const lang of LANGUAGES) {
+    const option = document.createElement('option')
+    option.value = lang.id
+    option.textContent = lang.name
+    frag.appendChild(option)
+  }
+  el.language.replaceChildren(frag)
+  el.language.value = language
+}
+
+/** Translate the static markup, then re-render everything built in javascript. */
+function applyLanguage() {
+  document.documentElement.lang = language
+  for (const node of document.querySelectorAll('[data-i18n]')) {
+    node.textContent = t(node.dataset.i18n)
+  }
+  for (const node of document.querySelectorAll('[data-i18n-placeholder]')) {
+    node.placeholder = t(node.dataset.i18nPlaceholder)
+  }
+  for (const node of document.querySelectorAll('[data-i18n-title]')) {
+    node.title = t(node.dataset.i18nTitle)
+  }
+  for (const node of document.querySelectorAll('[data-i18n-aria]')) {
+    node.setAttribute('aria-label', t(node.dataset.i18nAria))
+  }
+  if (el.language) el.language.value = language
+  setSendBusy(busy)
+  applyNotesOpen()
+  renderNotes()
+  applySettings()
+  renderSessionTitle()
+  renderMessages()
+  renderTokens()
+  renderUpdate()
+}
 
 function storedPersonality() {
   try {
@@ -184,11 +1606,7 @@ function applyCompact() {
   document.documentElement.dataset.compact = compact ? 'on' : 'off'
 }
 
-const HINTS = [
-  'give it a sidebar',
-  'make it feel like a terminal',
-  'add a notes panel',
-]
+const HINTS = ['hintSidebar', 'hintTerminal', 'hintNotes']
 
 const DEFAULT_SETTINGS = {
   model: { providerID: 'opencode', id: 'deepseek-v4.1-flash-free', variant: 'default' },
@@ -262,8 +1680,8 @@ function applySettings() {
     ? model.plan === 'go'
       ? 'go'
       : model.plan === 'paid'
-        ? 'paid'
-        : 'free'
+        ? t('metered')
+        : t('free')
     : ''
   el.modelDot.dataset.plan = model?.plan ?? 'free'
 
@@ -337,10 +1755,15 @@ function visibleSessions() {
 function timeAgo(stamp) {
   if (!stamp) return ''
   const seconds = Math.max(0, Math.round((Date.now() - stamp) / 1000))
-  if (seconds < 60) return 'now'
+  if (seconds < 60) return t('nowLabel')
   if (seconds < 3600) return `${Math.round(seconds / 60)}m`
   if (seconds < 86400) return `${Math.round(seconds / 3600)}h`
   return `${Math.round(seconds / 86400)}d`
+}
+
+function renderSessionTitle() {
+  const current = sessions.find((session) => session.id === sessionID)
+  el.sessionTitle.textContent = current?.title || t('newChat')
 }
 
 function renderSessions() {
@@ -348,7 +1771,7 @@ function renderSessions() {
   el.clearAll.hidden = !visible.length
 
   if (!visible.length) {
-    el.sessions.innerHTML = '<p class="rail-empty">no conversations yet</p>'
+    el.sessions.innerHTML = `<p class="rail-empty">${t('noChats')}</p>`
     return
   }
 
@@ -364,7 +1787,7 @@ function renderSessions() {
 
     const name = document.createElement('span')
     name.className = 'session-name'
-    name.textContent = session.title || 'new chat'
+    name.textContent = session.title || t('newChat')
 
     const meta = document.createElement('span')
     meta.className = 'session-meta'
@@ -378,8 +1801,8 @@ function renderSessions() {
     const del = document.createElement('button')
     del.type = 'button'
     del.className = 'session-del'
-    del.title = 'delete conversation'
-    del.setAttribute('aria-label', `delete ${session.title || 'conversation'}`)
+    del.title = t('deleteChat')
+    del.setAttribute('aria-label', `${t('deleteChat')} · ${session.title || t('newChat')}`)
     del.innerHTML =
       '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="m2.5 2.5 5 5m0-5-5 5"/></svg>'
     del.addEventListener('click', (event) => {
@@ -451,7 +1874,7 @@ function persistNotes() {
 function applyNotesOpen() {
   el.shell.dataset.notes = notesOpen ? 'on' : 'off'
   el.notesToggle.setAttribute('aria-pressed', String(notesOpen))
-  el.notesToggle.title = notesOpen ? 'hide notes' : 'show notes'
+  el.notesToggle.title = notesOpen ? t('hideNotes') : t('showNotes')
 }
 
 function addNote(text) {
@@ -481,7 +1904,7 @@ function renderNotes() {
   el.notesCount.textContent = notes.length ? String(notes.length) : ''
 
   if (!notes.length) {
-    el.notesList.innerHTML = '<p class="notes-empty">no notes yet</p>'
+    el.notesList.innerHTML = `<p class="notes-empty">${t('noNotes')}</p>`
     return
   }
 
@@ -494,14 +1917,14 @@ function renderNotes() {
     button.type = 'button'
     button.className = 'note'
     button.textContent = note.text
-    button.title = 'add to the composer'
+    button.title = t('addToComposer')
     button.addEventListener('click', () => useNote(note))
 
     const del = document.createElement('button')
     del.type = 'button'
     del.className = 'note-del'
-    del.title = 'delete note'
-    del.setAttribute('aria-label', 'delete note')
+    del.title = t('deleteNote')
+    del.setAttribute('aria-label', t('deleteNote'))
     del.innerHTML =
       '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="m2.5 2.5 5 5m0-5-5 5"/></svg>'
     del.addEventListener('click', (event) => {
@@ -519,21 +1942,21 @@ function renderNotes() {
 /* -------------------------------------------------------------------- models */
 
 const GROUPS = [
-  { plan: 'free', label: 'free', hint: 'no subscription needed' },
-  { plan: 'go', label: 'opencode go', hint: '' },
-  { plan: 'paid', label: 'pay per token', hint: 'billed to your opencode balance' },
+  { plan: 'free', labelKey: 'free', hintKey: 'freeHint' },
+  { plan: 'go', labelKey: 'goName', hintKey: null },
+  { plan: 'paid', labelKey: 'paidName', hintKey: 'paidHint' },
 ]
 
 function goHint() {
-  if (goStatus === 'inactive') return 'not active on this account'
-  if (goStatus === 'active') return 'active on this account'
-  return 'included in your subscription'
+  if (goStatus === 'inactive') return t('goInactive')
+  if (goStatus === 'active') return t('goActive')
+  return t('goHint')
 }
 
 function modelMeta(model) {
   if (model.plan === 'paid') {
     const { input, output } = model.price ?? {}
-    return input || output ? `$${input} / $${output} per m` : 'metered'
+    return input || output ? `$${input} / $${output} per m` : t('metered')
   }
   return model.context ? `${Math.round(model.context / 1000)}k` : ''
 }
@@ -573,9 +1996,7 @@ function modelRow(model) {
 
 function renderModels() {
   if (!models.length) {
-    el.models.innerHTML = `<p class="empty">${
-      modelsLoaded ? 'no models available.' : 'loading…'
-    }</p>`
+    el.models.innerHTML = `<p class="empty">${modelsLoaded ? t('noModels') : t('loading')}</p>`
     el.modelNote.textContent = ''
     return
   }
@@ -599,11 +2020,11 @@ function renderModels() {
     head.dataset.plan = group.plan
 
     const label = document.createElement('span')
-    label.textContent = group.label
+    label.textContent = t(group.labelKey)
 
     const hint = document.createElement('span')
     hint.className = 'model-group-hint'
-    hint.textContent = group.plan === 'go' ? goHint() : group.hint
+    hint.textContent = group.plan === 'go' ? goHint() : group.hintKey ? t(group.hintKey) : ''
 
     head.append(label, hint)
     frag.appendChild(head)
@@ -614,12 +2035,12 @@ function renderModels() {
   if (!frag.childNodes.length) {
     const empty = document.createElement('p')
     empty.className = 'empty'
-    empty.textContent = `no model matches “${modelQuery.trim()}”.`
+    empty.textContent = t('noMatch', { q: modelQuery.trim() })
     frag.appendChild(empty)
   }
 
   el.models.replaceChildren(frag)
-  el.modelNote.textContent = `${visible.length} of ${models.length}`
+  el.modelNote.textContent = t('ofModels', { n: visible.length, total: models.length })
 }
 
 /* ------------------------------------------------------------------ variants */
@@ -629,16 +2050,14 @@ function renderVariants() {
   const variants = model?.variants ?? []
   const options = ['default', ...variants]
 
-  el.reasoningNote.textContent = variants.length
-    ? `${variants.join(' / ')}`
-    : 'not supported by this model'
+  el.reasoningNote.textContent = variants.length ? `${variants.join(' / ')}` : t('notSupported')
 
   const frag = document.createDocumentFragment()
   for (const variant of options) {
     const button = document.createElement('button')
     button.type = 'button'
     button.setAttribute('aria-pressed', String(settings.model.variant === variant))
-    button.textContent = variant === 'default' ? 'auto' : variant
+    button.textContent = variant === 'default' ? t('auto') : variant
     button.disabled = !variants.length && variant !== 'default'
     button.addEventListener('click', () => {
       void save({ model: { variant } })
@@ -673,7 +2092,7 @@ function renderThemes() {
 
     const label = document.createElement('span')
     label.className = 'theme-label'
-    label.textContent = theme.name
+    label.textContent = t(theme.nameKey)
 
     button.append(preview, label)
     button.addEventListener('click', () => {
@@ -709,7 +2128,7 @@ function renderSegments(container, options, current, onPick) {
     const button = document.createElement('button')
     button.type = 'button'
     button.setAttribute('aria-pressed', String(current === option.id))
-    button.textContent = option.name
+    button.textContent = option.nameKey ? t(option.nameKey) : option.name
     button.addEventListener('click', () => onPick(option.id))
     frag.appendChild(button)
   }
@@ -718,7 +2137,7 @@ function renderSegments(container, options, current, onPick) {
 
 function renderPersonality() {
   const persona = PERSONAS.find((p) => p.id === settings.personality) ?? PERSONAS[0]
-  el.personalityNote.textContent = persona.note || ''
+  el.personalityNote.textContent = persona.noteKey ? t(persona.noteKey) : ''
   renderSegments(el.personalities, PERSONAS, settings.personality, (id) => save({ personality: id }))
 }
 
@@ -741,14 +2160,14 @@ async function checkForUpdate() {
 async function applyUpdate() {
   if (updateBusy || !window.conv.updates) return
   updateBusy = true
-  updateNote = 'downloading…'
+  updateNote = t('downloading')
   renderUpdate()
 
   try {
     const result = await window.conv.updates.apply()
     if (result && result.ok === false) {
       updateBusy = false
-      updateNote = result.reason || 'update failed'
+      updateNote = result.reason || t('updateFailed')
       renderUpdate()
     }
   } catch (cause) {
@@ -758,14 +2177,24 @@ async function applyUpdate() {
   }
 }
 
+/** Host progress lines are english; translate the two shapes we know. */
+function localizeProgress(message) {
+  const text = String(message ?? '')
+  if (/^installing/i.test(text)) return t('installing')
+  const percent = text.match(/^downloading\s+(\d+)%/i)
+  if (percent) return t('downloadingPct', { pct: percent[1] })
+  if (/^downloading\b/i.test(text)) return t('downloading')
+  return text
+}
+
 function renderUpdate() {
   if (!el.updateBtn) return
   if (updateBusy) {
-    el.updateBtn.textContent = updateNote || 'updating…'
+    el.updateBtn.textContent = updateNote || t('updateLabel')
     el.updateBtn.disabled = true
     el.updateBtn.hidden = false
   } else if (release?.available) {
-    el.updateBtn.textContent = `update to v${release.latest}`
+    el.updateBtn.textContent = t('updateTo', { v: release.latest })
     el.updateBtn.disabled = false
     el.updateBtn.hidden = false
   } else {
@@ -782,19 +2211,19 @@ function intro() {
   const modelName = (selectedModel()?.name || settings.model?.id || 'the model').toLowerCase()
 
   const title = document.createElement('h1')
-  title.textContent = 'what are we building?'
+  title.textContent = t('introTitle')
 
   const line = document.createElement('p')
-  line.textContent =
-    `type what you want and ${modelName} will change it right here — layout, colors, whatever.`
+  line.textContent = t('introLine', { model: modelName })
 
   const examplesLabel = document.createElement('div')
   examplesLabel.className = 'intro-examples'
-  examplesLabel.textContent = 'examples:'
+  examplesLabel.textContent = t('examples')
 
   const hints = document.createElement('div')
   hints.className = 'intro-hints'
-  for (const hint of HINTS) {
+  for (const hintKey of HINTS) {
+    const hint = t(hintKey)
     const chip = document.createElement('button')
     chip.type = 'button'
     chip.className = 'hint'
@@ -871,8 +2300,8 @@ function renderMessages() {
       const collapsed = collapsedThoughts.has(key)
       block.classList.toggle('collapsed', collapsed)
       block.setAttribute('aria-expanded', String(!collapsed))
-      block.title = collapsed ? 'show thoughts' : 'hide thoughts'
-      block.textContent = collapsed ? 'thoughts' : thoughtText
+      block.title = collapsed ? t('showThoughts') : t('hideThoughts')
+      block.textContent = collapsed ? t('thoughts') : thoughtText
 
       const toggle = () => {
         if (collapsedThoughts.has(key)) collapsedThoughts.delete(key)
@@ -880,8 +2309,8 @@ function renderMessages() {
         const next = collapsedThoughts.has(key)
         block.classList.toggle('collapsed', next)
         block.setAttribute('aria-expanded', String(!next))
-        block.title = next ? 'show thoughts' : 'hide thoughts'
-        block.textContent = next ? 'thoughts' : thoughtText
+        block.title = next ? t('showThoughts') : t('hideThoughts')
+        block.textContent = next ? t('thoughts') : thoughtText
       }
 
       block.addEventListener('click', toggle)
@@ -907,8 +2336,7 @@ function renderMessages() {
   if (busy) {
     const indicator = document.createElement('div')
     indicator.className = 'working'
-    indicator.innerHTML =
-      '<span class="working-label">thinking</span><span class="dot"></span><span class="dot"></span><span class="dot"></span>'
+    indicator.innerHTML = `<span class="working-label">${t('thinking')}</span><span class="dot"></span><span class="dot"></span><span class="dot"></span>`
     // Anchor the animations to the wall clock so they do not restart on each render.
     const now = Date.now()
     indicator.querySelector('.working-label').style.animationDelay = `-${now % 2400}ms`
@@ -931,7 +2359,7 @@ function renderMessages() {
       const action = document.createElement('button')
       action.type = 'button'
       action.className = 'err-action'
-      action.textContent = 'choose a model'
+      action.textContent = t('chooseModel')
       action.addEventListener('click', () => void openSheet())
       line.appendChild(action)
     }
@@ -959,7 +2387,7 @@ function formatCost(value) {
 function renderSpend() {
   const text = formatCost(lastCost)
   el.spend.textContent = text
-  el.spend.title = text ? `spent this conversation · ${text}` : ''
+  el.spend.title = text ? t('spend', { cost: text }) : ''
   el.spend.hidden = !text
   el.meter.hidden = !settings.showTokens && !(lastCost > 0)
 }
@@ -975,11 +2403,11 @@ function renderAssistantText(container, text) {
       const btn = document.createElement('button')
       btn.type = 'button'
       btn.className = 'code-copy'
-      btn.textContent = 'copy'
+      btn.textContent = t('copy')
       btn.addEventListener('click', () => {
         if (navigator.clipboard) navigator.clipboard.writeText(code.textContent).catch(() => {})
-        btn.textContent = 'copied'
-        setTimeout(() => (btn.textContent = 'copy'), 1200)
+        btn.textContent = t('copied')
+        setTimeout(() => (btn.textContent = t('copy')), 1200)
       })
       pre.append(btn, code)
       container.appendChild(pre)
@@ -1031,8 +2459,11 @@ function renderTokens(tokens, cost) {
   const left = Math.max(0, settings.budget - used)
   const pct = Math.min(100, (used / settings.budget) * 100)
 
-  el.tokensLabel.textContent = `${used.toLocaleString('en-US')} used · ${left.toLocaleString('en-US')} left`
-  el.meterLeft.textContent = `${pct.toFixed(1)}% of ${settings.budget.toLocaleString('en-US')}`
+  el.tokensLabel.textContent = `${used.toLocaleString('en-US')} ${t('used')} · ${left.toLocaleString('en-US')} ${t('left')}`
+  el.meterLeft.textContent = t('percentOf', {
+    pct: pct.toFixed(1),
+    budget: settings.budget.toLocaleString('en-US'),
+  })
   el.meterFill.style.width = pct + '%'
   el.meterFill.className = 'meter-fill' + (pct >= 100 ? ' over' : pct >= 80 ? ' warn' : '')
 }
@@ -1045,13 +2476,13 @@ async function openSheet() {
 
   if (modelsLoaded) return
 
-  el.models.innerHTML = '<p class="empty">loading…</p>'
+  el.models.innerHTML = `<p class="empty">${t('loading')}</p>`
   try {
     models = (await window.conv.models.list()) ?? []
   } catch (cause) {
     models = []
     modelsLoaded = true
-    el.models.innerHTML = `<p class="empty">could not load models: ${String(
+    el.models.innerHTML = `<p class="empty">${t('noModels')} ${String(
       cause?.message ?? cause
     )}</p>`
     return
@@ -1068,8 +2499,8 @@ function closeSheet() {
 
 function setSendBusy(on) {
   el.send.classList.toggle('busy', on)
-  el.send.title = on ? 'stop' : 'send (enter)'
-  el.send.setAttribute('aria-label', on ? 'stop' : 'send')
+  el.send.title = on ? t('stop') : t('sendHint')
+  el.send.setAttribute('aria-label', on ? t('stop') : t('send'))
 }
 
 function showNotice(text) {
@@ -1091,9 +2522,9 @@ function handleCommand(text) {
         showNotice(`persona: ${current?.name ?? 'balanced'} · ${PERSONAS.map((p) => p.id).join(', ')}`)
       } else if (PERSONAS.some((p) => p.id === id)) {
         void save({ personality: id })
-        showNotice(`persona set to ${id}`)
+        showNotice(t('personaSet', { id }))
       } else {
-        showNotice(`unknown persona · try ${PERSONAS.map((p) => p.id).join(', ')}`)
+        showNotice(t('personaUnknown', { list: PERSONAS.map((p) => p.id).join(', ') }))
       }
       return
     }
@@ -1103,7 +2534,7 @@ function handleCommand(text) {
         showNotice(`effort: ${settings.model.variant} · ${variants.join(', ')}`)
       } else {
         void save({ model: { variant: arg } })
-        showNotice(`effort set to ${arg}`)
+        showNotice(t('effortSet', { id: arg }))
       }
       return
     }
@@ -1120,9 +2551,9 @@ function handleCommand(text) {
           const keep =
             settings.model.variant === 'default' || m.variants.includes(settings.model.variant)
           void save({ model: { providerID: m.providerID, id: m.id, variant: keep ? settings.model.variant : 'default' } })
-          showNotice(`model set to ${m.name}`)
+          showNotice(t('modelSet', { name: m.name }))
         } else {
-          showNotice(`no model matches "${arg}"`)
+          showNotice(t('noModelMatch', { q: arg }))
         }
       }
       return
@@ -1139,7 +2570,7 @@ function handleCommand(text) {
         /* memory-only is fine */
       }
       applyCompact()
-      showNotice(`compact ${compact ? 'on' : 'off'}`)
+      showNotice(compact ? t('compactOn') : t('compactOff'))
       return
     }
     case 'clear': {
@@ -1148,11 +2579,11 @@ function handleCommand(text) {
         clearedMessages[sessionID] = last.id
         saveCleared()
       }
-      showNotice('chat cleared · context kept')
+      showNotice(t('chatCleared'))
       return
     }
     default:
-      showNotice('unknown command · try ?persona ?effort ?model ?version ?compact ?clear')
+      showNotice(t('unknownCommand'))
   }
 }
 
@@ -1182,8 +2613,8 @@ async function submit() {
     if (result && result.ok === false) {
       error = {
         message: result.reason
-          ? `this copy has no ai attached (${result.reason}).`
-          : 'this copy has no ai attached.',
+          ? `${t('noAi')} (${result.reason})`
+          : t('noAi'),
       }
       busy = false
       pending = null
@@ -1261,6 +2692,15 @@ el.noteForm.addEventListener('submit', (event) => {
 applyNotesOpen()
 renderNotes()
 
+el.language?.addEventListener('change', () => {
+  language = el.language.value
+  persistLanguage()
+  applyLanguage()
+})
+
+renderLanguageOptions()
+applyLanguage()
+
 el.sheet.addEventListener('click', (event) => {
   if (event.target === el.sheet) closeSheet()
 })
@@ -1300,7 +2740,7 @@ let clearArmTimer = null
 function disarmClear() {
   clearArmedAt = 0
   el.clearAll.classList.remove('arm')
-  el.clearAll.textContent = 'clear all'
+  el.clearAll.textContent = t('clearAll')
 }
 
 el.clearAll.addEventListener('click', () => {
@@ -1313,7 +2753,7 @@ el.clearAll.addEventListener('click', () => {
   }
   clearArmedAt = Date.now()
   el.clearAll.classList.add('arm')
-  el.clearAll.textContent = 'sure? tap again'
+  el.clearAll.textContent = t('confirmClear')
   if (clearArmTimer) clearTimeout(clearArmTimer)
   clearArmTimer = setTimeout(disarmClear, 4000)
 })
@@ -1356,7 +2796,7 @@ function playChime() {
 function notifyDone() {
   try {
     if (window.Notification && Notification.permission === 'granted') {
-      new Notification('subzer0', { body: 'done' })
+      new Notification('subzer0', { body: t('done') })
     } else if (window.Notification && Notification.permission !== 'denied') {
       Notification.requestPermission()
     }
@@ -1398,9 +2838,7 @@ window.conv.onSessions((payload) => {
   sessions = payload?.sessions ?? []
   if (payload?.current) sessionID = payload.current
   renderSessions()
-
-  const current = sessions.find((session) => session.id === sessionID)
-  el.sessionTitle.textContent = current?.title || 'new chat'
+  renderSessionTitle()
 })
 
 window.conv.onError((payload) => {
@@ -1411,7 +2849,7 @@ window.conv.onError((payload) => {
 
 window.conv.onUpdateProgress?.((payload) => {
   if (payload?.message) {
-    updateNote = payload.message
+    updateNote = localizeProgress(payload.message)
     renderUpdate()
   }
 })
@@ -1445,8 +2883,7 @@ window.conv.init().then(async (result) => {
   refreshSessions()
   void checkForUpdate()
 
-  const current = sessions.find((session) => session.id === sessionID)
-  el.sessionTitle.textContent = current?.title || 'new chat'
+  renderSessionTitle()
 
   // Fetch the model list once so the settings sheet is instant.
   try {

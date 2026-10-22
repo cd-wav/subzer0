@@ -46,26 +46,26 @@
         </div>
 
         <button class="newchat" id="newChat">
-          <span>new chat</span>
+          <span data-i18n="newChat">new chat</span>
           <kbd>⌘N</kbd>
         </button>
 
         <div class="rail-head">
-          <span class="rail-label">recent</span>
-          <button class="clear-all" id="clearAll" hidden>clear all</button>
+          <span class="rail-label" data-i18n="recent">recent</span>
+          <button class="clear-all" id="clearAll" hidden data-i18n="clearAll">clear all</button>
         </div>
-        <nav class="sessions" id="sessions" aria-label="conversations">
-          <p class="rail-empty">no conversations yet</p>
+        <nav class="sessions" id="sessions" aria-label="recent" data-i18n-aria="recent">
+          <p class="rail-empty" data-i18n="noChats">no conversations yet</p>
         </nav>
 
         <div class="rail-foot">
-          <button class="modelchip" id="modelChip" title="change model">
+          <button class="modelchip" id="modelChip" title="change model" data-i18n-title="changeModel">
             <span class="dot" id="modelDot" data-plan="free"></span>
             <span class="modelchip-name" id="modelChipName">model</span>
             <span class="modelchip-plan" id="modelChipPlan"></span>
           </button>
-          <button class="rail-btn" id="gear" title="settings (ctrl+k)">
-            settings
+          <button class="rail-btn" id="gear" title="settings (ctrl+k)" data-i18n-title="settingsTitle">
+            <span data-i18n="settingsTitle">settings</span>
             <kbd>⌘K</kbd>
           </button>
         </div>
@@ -83,6 +83,8 @@
               type="button"
               aria-pressed="true"
               title="toggle notes"
+              data-i18n="notesTitle"
+              data-i18n-title="showNotes"
             >
               notes
             </button>
@@ -98,6 +100,7 @@
               id="input"
               rows="1"
               placeholder="tell me what to change…"
+              data-i18n-placeholder="inputPlaceholder"
               autofocus
             ></textarea>
             <button type="submit" id="send" class="send" title="send (enter)" aria-label="send">
@@ -130,7 +133,7 @@
             <div class="meter-row">
               <span id="meterLeft"></span>
               <span class="meter-right">
-                <span id="meterLocked" hidden>ai offline</span>
+                <span id="meterLocked" hidden data-i18n="offline">ai offline</span>
                 <span class="spend" id="spend" title="spent this conversation" hidden></span>
               </span>
             </div>
@@ -138,9 +141,9 @@
         </footer>
       </main>
 
-      <aside class="notes" id="notes" aria-label="notes">
+      <aside class="notes" id="notes" aria-label="notes" data-i18n-aria="notesTitle">
         <header class="notes-head">
-          <h2>notes</h2>
+          <h2 data-i18n="notesTitle">notes</h2>
           <span class="notes-count" id="notesCount"></span>
         </header>
 
@@ -150,9 +153,17 @@
             id="noteInput"
             type="text"
             placeholder="jot a note…"
+            data-i18n-placeholder="notePlaceholder"
             autocomplete="off"
           />
-          <button class="notes-submit" id="noteAdd" type="submit" title="add note" aria-label="add note">
+          <button
+            class="notes-submit"
+            id="noteAdd"
+            type="submit"
+            title="add note"
+            aria-label="add note"
+            data-i18n-title="addNote"
+          >
             <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true">
               <path
                 fill="none"
@@ -171,8 +182,8 @@
 
     <dialog class="sheet" id="settings">
       <header class="sheet-head">
-        <h2>settings</h2>
-        <button class="iconbtn" id="close" aria-label="close">
+        <h2 data-i18n="settingsTitle">settings</h2>
+        <button class="iconbtn" id="close" aria-label="close" data-i18n-aria="closeLabel">
           <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
             <path
               fill="none"
@@ -188,7 +199,7 @@
       <div class="sheet-body">
         <section class="panel models-panel">
           <div class="group-head">
-            <h3>model</h3>
+            <h3 data-i18n="modelTitle">model</h3>
             <span class="note" id="modelNote"></span>
           </div>
           <input
@@ -196,18 +207,29 @@
             id="modelSearch"
             type="search"
             placeholder="search models"
+            data-i18n-placeholder="searchModels"
             autocomplete="off"
             spellcheck="false"
           />
           <div class="rows" id="models">
-            <p class="empty">loading…</p>
+            <p class="empty" data-i18n="loading">loading…</p>
           </div>
         </section>
 
         <div class="panel-stack">
           <section class="panel">
             <div class="group-head">
-              <h3>personality</h3>
+              <h3 data-i18n="languageTitle">language</h3>
+              <span class="note" data-i18n="languageNote">ui language</span>
+            </div>
+            <label class="row">
+              <select class="lang" id="language"></select>
+            </label>
+          </section>
+
+          <section class="panel">
+            <div class="group-head">
+              <h3 data-i18n="personalityTitle">personality</h3>
               <span class="note" id="personalityNote"></span>
             </div>
             <div class="seg wrap" id="personalities"></div>
@@ -215,37 +237,37 @@
 
           <section class="panel">
             <div class="group-head">
-              <h3>reasoning</h3>
+              <h3 data-i18n="reasoningTitle">reasoning</h3>
               <span class="note" id="reasoningNote"></span>
             </div>
             <div class="seg" id="variants"></div>
           </section>
 
           <section class="panel">
-            <div class="group-head"><h3>appearance</h3></div>
+            <div class="group-head"><h3 data-i18n="appearanceTitle">appearance</h3></div>
             <div class="themes" id="themes"></div>
             <div class="row between">
-              <span class="row-label">accent</span>
+              <span class="row-label" data-i18n="accent">accent</span>
               <div class="swatches" id="accents"></div>
             </div>
             <div class="row between">
-              <span class="row-label">density</span>
+              <span class="row-label" data-i18n="density">density</span>
               <div class="seg small" id="densities"></div>
             </div>
             <div class="row between">
-              <span class="row-label">text size</span>
+              <span class="row-label" data-i18n="textSize">text size</span>
               <div class="seg small" id="fontSizes"></div>
             </div>
           </section>
 
           <section class="panel">
-            <div class="group-head"><h3>chat</h3></div>
+            <div class="group-head"><h3 data-i18n="chatTitle">chat</h3></div>
             <label class="row">
-              <span class="row-label">token counter</span>
+              <span class="row-label" data-i18n="tokenCounter">token counter</span>
               <input type="checkbox" id="showTokens" />
             </label>
             <label class="row">
-              <span class="row-label">token budget</span>
+              <span class="row-label" data-i18n="tokenBudget">token budget</span>
               <input type="number" id="budget" min="1000" step="5000" />
             </label>
             <textarea
@@ -253,6 +275,7 @@
               id="custom"
               rows="3"
               placeholder="custom instructions — always do this…"
+              data-i18n-placeholder="customPlaceholder"
             ></textarea>
           </section>
         </div>

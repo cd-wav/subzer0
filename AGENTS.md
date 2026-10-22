@@ -99,6 +99,11 @@ $env:CONV_DEBUG_PORT="9222"; npm run dev
   that has to survive.
 - The seed app always shows: the user's own messages, the assistant's replies,
   and (when enabled) a token meter under the input.
+- The seed app ships 12 UI languages (en, ru, de, es, fr, pt, it, nl, pl, tr,
+  uk, zh). Settings has a language select; every string goes through `t(key)` in
+  `app.js` (`MESSAGES` table) and static markup uses `data-i18n`,
+  `data-i18n-placeholder`, `data-i18n-title`, `data-i18n-aria`. The choice is
+  stored in `localStorage` (`subzer0.language`), not in `.conv.json`.
 - Settings live in `sandbox/.conv.json` (`model`, `theme`, `showTokens`,
   `budget`, `sessionID`). They are pushed to the renderer with every `app:update`
   and survive reloads, restarts and app rewrites. There are exactly **two

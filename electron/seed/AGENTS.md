@@ -20,8 +20,8 @@ These three files **are** the app the user is looking at. Edits appear instantly
 - When a newer subzer0 release is out, the log shows a quiet notice with an
   "Update" button; pressing it downloads, reinstalls and relaunches.
 - Settings dialog: model (free / OpenCode Go / pay-per-token, grouped and
-  searchable), reasoning effort, theme (dark/light), accent colour, density,
-  text size, token counter toggle, token budget.
+  searchable), language, reasoning effort, theme (dark/light), accent colour,
+  density, text size, token counter toggle, token budget.
 - Brand mark is the inline SVG slashed zero; never replace it with an emoji or a
   plain coloured square.
 - Render only assistant `text` parts — no reasoning traces or tool logs.
@@ -32,11 +32,16 @@ These three files **are** the app the user is looking at. Edits appear instantly
    from `window.conv.onUpdate(...)`. That is the user's only way to reach you.
 2. **Never break settings.** Keep model, reasoning, theme, accent, density, text
    size and the token counter working.
-3. Plain HTML/CSS/JS only. No frameworks, bundlers, npm, CDN or network imports.
-4. Self-contained: no external images, fonts or scripts. Inline SVG only.
-5. Preserve what the user liked; make surgical edits instead of rewriting whole files.
-6. No dead UI. `window.conv.reset()` and `window.conv.exportApp()` exist but have no button.
-7. No shell, no network. Read/write/edit/glob/grep inside this folder only.
+3. **Translate every string.** The language selector swaps the whole UI (12
+   languages, persisted in `localStorage`). Never hardcode user-facing text:
+   static markup uses `data-i18n`, `data-i18n-placeholder`, `data-i18n-title`
+   and `data-i18n-aria`; javascript uses `t('key', { vars })`. Add the key to
+   `MESSAGES` for all 12 languages.
+4. Plain HTML/CSS/JS only. No frameworks, bundlers, npm, CDN or network imports.
+5. Self-contained: no external images, fonts or scripts. Inline SVG only.
+6. Preserve what the user liked; make surgical edits instead of rewriting whole files.
+7. No dead UI. `window.conv.reset()` and `window.conv.exportApp()` exist but have no button.
+8. No shell, no network. Read/write/edit/glob/grep inside this folder only.
 
 ## Bridge
 

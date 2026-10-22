@@ -948,6 +948,25 @@ textarea::placeholder {
   color: var(--muted);
 }
 
+.lang {
+  max-width: 170px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.lang:focus,
+.lang:focus-visible {
+  border-color: var(--accent);
+}
+
 .rows {
   display: flex;
   flex-direction: column;
