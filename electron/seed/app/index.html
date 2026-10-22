@@ -75,8 +75,17 @@
         <header class="topbar">
           <div class="title" id="sessionTitle">new chat</div>
           <div class="top-actions">
-            <button class="update-btn" id="updateBtn" hidden>update</button>
+            <button class="update-btn" id="updateBtn" type="button" hidden>update</button>
             <span class="tokens" id="tokensLabel"></span>
+            <button
+              class="top-btn"
+              id="notesToggle"
+              type="button"
+              aria-pressed="true"
+              title="toggle notes"
+            >
+              notes
+            </button>
           </div>
         </header>
 
@@ -121,13 +130,43 @@
             <div class="meter-row">
               <span id="meterLeft"></span>
               <span class="meter-right">
-                <span id="meterCost"></span>
                 <span id="meterLocked" hidden>ai offline</span>
+                <span class="spend" id="spend" title="spent this conversation" hidden></span>
               </span>
             </div>
           </div>
         </footer>
       </main>
+
+      <aside class="notes" id="notes" aria-label="notes">
+        <header class="notes-head">
+          <h2>notes</h2>
+          <span class="notes-count" id="notesCount"></span>
+        </header>
+
+        <form class="notes-add" id="noteForm">
+          <input
+            class="notes-input"
+            id="noteInput"
+            type="text"
+            placeholder="jot a note…"
+            autocomplete="off"
+          />
+          <button class="notes-submit" id="noteAdd" type="submit" title="add note" aria-label="add note">
+            <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                d="M7 2.5v9M2.5 7h9"
+              />
+            </svg>
+          </button>
+        </form>
+
+        <div class="notes-list" id="notesList"></div>
+      </aside>
     </div>
 
     <dialog class="sheet" id="settings">

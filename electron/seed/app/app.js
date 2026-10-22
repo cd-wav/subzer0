@@ -17,8 +17,8 @@ const el = {
   meter: document.getElementById('meter'),
   meterFill: document.getElementById('meterFill'),
   meterLeft: document.getElementById('meterLeft'),
-  meterCost: document.getElementById('meterCost'),
   meterLocked: document.getElementById('meterLocked'),
+  spend: document.getElementById('spend'),
   tokensLabel: document.getElementById('tokensLabel'),
   sessionTitle: document.getElementById('sessionTitle'),
   newChat: document.getElementById('newChat'),
@@ -44,14 +44,20 @@ const el = {
   fontSizes: document.getElementById('fontSizes'),
   showTokens: document.getElementById('showTokens'),
   budget: document.getElementById('budget'),
+  shell: document.querySelector('.shell'),
+  notesToggle: document.getElementById('notesToggle'),
+  noteForm: document.getElementById('noteForm'),
+  noteInput: document.getElementById('noteInput'),
+  notesList: document.getElementById('notesList'),
+  notesCount: document.getElementById('notesCount'),
   cmdMenu: document.getElementById('cmdMenu'),
   custom: document.getElementById('custom'),
   updateBtn: document.getElementById('updateBtn'),
 }
 
 const THEMES = [
-  { id: 'dark', name: 'dark', bg: '#000000', line: '#232323', accent: '#6b7280' },
-  { id: 'light', name: 'light', bg: '#fafafa', line: '#e4e4e4', accent: '#3f4651' },
+  { id: 'dark', name: 'dark', bg: '#000000', line: '#232323', accent: '#c9c9c9' },
+  { id: 'light', name: 'light', bg: '#fafafa', line: '#e4e4e4', accent: '#1a1a1a' },
 ]
 
 const ACCENTS = [
@@ -83,9 +89,11 @@ const PERSONAS = [
 ]
 
 const PERSONALITY_KEY = 'subzer0.personality'
+const ACCENT_KEY = 'subzer0.accent-violet'
 const COMPACT_KEY = 'subzer0.compact'
 const CUSTOM_KEY = 'subzer0.custom'
-const COMMANDS = ['persona', 'effort', 'model', 'version', 'compact']
+const CLEARED_KEY = 'subzer0.cleared'
+const COMMANDS = ['persona', 'effort', 'model', 'version', 'compact', 'clear']
 
 function storedPersonality() {
   try {
@@ -114,14 +122,13 @@ function withContext(text) {
   const parts = []
   if (persona && persona.prompt) parts.push(`[persona: ${persona.id}]\n${persona.prompt}`)
   if (customInstructions.trim()) parts.push(`[instructions]\n${customInstructions.trim()}`)
-  parts.push('[language]\nreply in the same language the user writes in')
   if (!parts.length) return text
   return `${text}\n\n${parts.join('\n\n')}`
 }
 
 function cleanUserText(text) {
   if (!text) return text
-  return text.replace(/\r?\n\r?\n\[(persona|instructions|language)[\s\S]*$/, '')
+  return text.replace(/\r?\n\r?\n\[(persona|instructions)[\s\S]*$/, '')
 }
 
 function loadCustom() {
@@ -130,6 +137,31 @@ function loadCustom() {
   } catch {
     return ''
   }
+}
+
+function loadCleared() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(CLEARED_KEY) ?? '{}')
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveCleared() {
+  try {
+    window.localStorage.setItem(CLEARED_KEY, JSON.stringify(clearedMessages))
+  } catch {
+    /* memory-only is fine */
+  }
+}
+
+/** Hide the transcript through the last cleared message, keeping the real history. */
+function visibleMessages() {
+  const marker = sessionID ? clearedMessages[sessionID] : null
+  if (!marker) return messages
+  const index = messages.findIndex((message) => message.id === marker)
+  return index === -1 ? messages : messages.slice(index + 1)
 }
 
 function persistCustom() {
@@ -178,6 +210,11 @@ let goStatus = 'unknown'
 let sessions = []
 let sessionID = null
 let messages = []
+/**
+ * Last message id hidden per session by ?clear. The conversation itself is kept
+ * so the model still remembers it; only the transcript is trimmed.
+ */
+let clearedMessages = loadCleared()
 let lastTokens = null
 let lastCost = 0
 let busy = false
@@ -213,7 +250,8 @@ function applySettings() {
   root.dataset.size = settings.fontSize
   root.style.setProperty('--accent', activeAccent())
 
-  el.meter.hidden = !settings.showTokens
+  el.meter.hidden = !settings.showTokens && !(lastCost > 0)
+  el.meter.classList.toggle('spend-only', !settings.showTokens)
   el.showTokens.checked = Boolean(settings.showTokens)
   el.budget.value = String(settings.budget)
   el.custom.value = customInstructions
@@ -366,6 +404,118 @@ function refreshSessions() {
     .catch(() => {})
 }
 
+/* --------------------------------------------------------------------- notes */
+
+const NOTES_KEY = 'subzer0.notes'
+const NOTES_OPEN_KEY = 'subzer0.notes-open'
+
+function readStore(key) {
+  try {
+    return window.localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function writeStore(key, value) {
+  try {
+    window.localStorage.setItem(key, value)
+  } catch {
+    /* memory-only is fine */
+  }
+}
+
+function loadNotes() {
+  try {
+    const list = JSON.parse(readStore(NOTES_KEY) ?? '[]')
+    if (!Array.isArray(list)) return []
+    return list
+      .filter((note) => note && typeof note.text === 'string' && note.text.trim())
+      .map((note) => ({
+        id: String(note.id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`),
+        text: note.text,
+      }))
+      .slice(0, 200)
+  } catch {
+    return []
+  }
+}
+
+let notes = loadNotes()
+let notesOpen = readStore(NOTES_OPEN_KEY) !== '0'
+
+function persistNotes() {
+  writeStore(NOTES_KEY, JSON.stringify(notes))
+}
+
+function applyNotesOpen() {
+  el.shell.dataset.notes = notesOpen ? 'on' : 'off'
+  el.notesToggle.setAttribute('aria-pressed', String(notesOpen))
+  el.notesToggle.title = notesOpen ? 'hide notes' : 'show notes'
+}
+
+function addNote(text) {
+  const clean = text.trim()
+  if (!clean) return
+  notes.unshift({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text: clean })
+  notes = notes.slice(0, 200)
+  persistNotes()
+  renderNotes()
+}
+
+function removeNote(id) {
+  notes = notes.filter((note) => note.id !== id)
+  persistNotes()
+  renderNotes()
+}
+
+function useNote(note) {
+  const current = el.input.value.trim()
+  el.input.value = current ? `${current} ${note.text}` : note.text
+  el.input.focus()
+  el.input.setSelectionRange(el.input.value.length, el.input.value.length)
+  autosize()
+}
+
+function renderNotes() {
+  el.notesCount.textContent = notes.length ? String(notes.length) : ''
+
+  if (!notes.length) {
+    el.notesList.innerHTML = '<p class="notes-empty">no notes yet</p>'
+    return
+  }
+
+  const frag = document.createDocumentFragment()
+  for (const note of notes) {
+    const row = document.createElement('div')
+    row.className = 'note-row'
+
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'note'
+    button.textContent = note.text
+    button.title = 'add to the composer'
+    button.addEventListener('click', () => useNote(note))
+
+    const del = document.createElement('button')
+    del.type = 'button'
+    del.className = 'note-del'
+    del.title = 'delete note'
+    del.setAttribute('aria-label', 'delete note')
+    del.innerHTML =
+      '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="m2.5 2.5 5 5m0-5-5 5"/></svg>'
+    del.addEventListener('click', (event) => {
+      event.stopPropagation()
+      removeNote(note.id)
+    })
+
+    row.append(button, del)
+    frag.appendChild(row)
+  }
+
+  el.notesList.replaceChildren(frag)
+}
+
 /* -------------------------------------------------------------------- models */
 
 const GROUPS = [
@@ -395,6 +545,9 @@ function modelRow(model) {
   const active = model.id === settings.model.id && model.providerID === settings.model.providerID
   button.setAttribute('aria-pressed', String(active))
 
+  const dot = document.createElement('span')
+  dot.className = 'dot'
+
   const name = document.createElement('span')
   name.className = 'name'
   name.textContent = model.name
@@ -403,7 +556,7 @@ function modelRow(model) {
   meta.className = 'meta'
   meta.textContent = modelMeta(model)
 
-  button.append(name, meta)
+  button.append(dot, name, meta)
   button.addEventListener('click', () => {
     const keep =
       settings.model.variant === 'default' || model.variants.includes(settings.model.variant)
@@ -658,16 +811,28 @@ function intro() {
   return wrap
 }
 
+/** Reasoning blocks the user collapsed, keyed by assistant message id. */
+const collapsedThoughts = new Set()
+/** Messages whose finished thoughts have already been compacted automatically. */
+const settledThoughts = new Set()
+
 function renderMessages() {
   const stick = el.log.scrollHeight - el.log.scrollTop - el.log.clientHeight < 90
   el.log.replaceChildren()
 
-  if (!messages.length && !busy && !pending && !error && !notice) {
+  const shown = visibleMessages()
+
+  if (!shown.length && !busy && !pending && !error && !notice) {
     el.log.appendChild(intro())
     return
   }
 
-  for (const message of messages) {
+  let lastAssistantId = null
+  for (const message of shown) {
+    if (message.type === 'assistant') lastAssistantId = message.id
+  }
+
+  for (const [messageIndex, message] of shown.entries()) {
     if (message.type === 'user') {
       const text = cleanUserText(message.text ?? message.payload?.text)
       if (!text) continue
@@ -680,22 +845,56 @@ function renderMessages() {
 
     if (message.type !== 'assistant') continue
 
+    const thoughtParts = []
+    const textParts = []
     for (const part of message.content ?? []) {
       if (part.type === 'reasoning' || part.type === 'thinking') {
-        if (!part.text || !part.text.trim()) continue
-        const details = document.createElement('details')
-        details.className = 'msg thinking'
-        const summary = document.createElement('summary')
-        summary.textContent = 'thoughts'
-        const body = document.createElement('div')
-        body.textContent = part.text
-        details.append(summary, body)
-        el.log.appendChild(details)
+        if (part.text && part.text.trim()) thoughtParts.push(part.text.trim())
         continue
       }
-      if (part.type !== 'text' || !part.text.trim()) continue
-      renderAssistantText(el.log, part.text)
+      if (part.type === 'text' && part.text && part.text.trim()) textParts.push(part.text)
     }
+
+    if (thoughtParts.length) {
+      const key = message.id ?? `assistant-${messageIndex}`
+      const settled = message.id !== lastAssistantId || !busy
+      if (settled && !settledThoughts.has(key)) {
+        settledThoughts.add(key)
+        collapsedThoughts.add(key)
+      }
+
+      const thoughtText = thoughtParts.join('\n\n')
+      const block = document.createElement('div')
+      block.className = 'msg thinking'
+      block.setAttribute('role', 'button')
+      block.tabIndex = 0
+      const collapsed = collapsedThoughts.has(key)
+      block.classList.toggle('collapsed', collapsed)
+      block.setAttribute('aria-expanded', String(!collapsed))
+      block.title = collapsed ? 'show thoughts' : 'hide thoughts'
+      block.textContent = collapsed ? 'thoughts' : thoughtText
+
+      const toggle = () => {
+        if (collapsedThoughts.has(key)) collapsedThoughts.delete(key)
+        else collapsedThoughts.add(key)
+        const next = collapsedThoughts.has(key)
+        block.classList.toggle('collapsed', next)
+        block.setAttribute('aria-expanded', String(!next))
+        block.title = next ? 'show thoughts' : 'hide thoughts'
+        block.textContent = next ? 'thoughts' : thoughtText
+      }
+
+      block.addEventListener('click', toggle)
+      block.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          toggle()
+        }
+      })
+      el.log.appendChild(block)
+    }
+
+    for (const text of textParts) renderAssistantText(el.log, text)
   }
 
   if (pending) {
@@ -708,7 +907,15 @@ function renderMessages() {
   if (busy) {
     const indicator = document.createElement('div')
     indicator.className = 'working'
-    indicator.innerHTML = '<span></span><span></span><span></span>'
+    indicator.innerHTML =
+      '<span class="working-label">thinking</span><span class="dot"></span><span class="dot"></span><span class="dot"></span>'
+    // Anchor the animations to the wall clock so they do not restart on each render.
+    const now = Date.now()
+    indicator.querySelector('.working-label').style.animationDelay = `-${now % 2400}ms`
+    indicator.querySelectorAll('.dot').forEach((dot, index) => {
+      const phase = (((now - index * 160) % 1200) + 1200) % 1200
+      dot.style.animationDelay = `-${phase}ms`
+    })
     el.log.appendChild(indicator)
   }
 
@@ -740,6 +947,21 @@ function renderMessages() {
   }
 
   if (stick) el.log.scrollTop = el.log.scrollHeight
+}
+
+function formatCost(value) {
+  if (!Number.isFinite(value) || value <= 0) return ''
+  if (value >= 1) return `$${value.toFixed(2)}`
+  if (value >= 0.01) return `$${value.toFixed(4)}`
+  return `$${value.toFixed(6)}`
+}
+
+function renderSpend() {
+  const text = formatCost(lastCost)
+  el.spend.textContent = text
+  el.spend.title = text ? `spent this conversation · ${text}` : ''
+  el.spend.hidden = !text
+  el.meter.hidden = !settings.showTokens && !(lastCost > 0)
 }
 
 function renderAssistantText(container, text) {
@@ -798,6 +1020,7 @@ function renderCmdMenu() {
 function renderTokens(tokens, cost) {
   if (tokens) lastTokens = tokens
   if (typeof cost === 'number') lastCost = cost
+  renderSpend()
   if (!settings.showTokens || !lastTokens) {
     el.tokensLabel.textContent = ''
     return
@@ -812,7 +1035,6 @@ function renderTokens(tokens, cost) {
   el.meterLeft.textContent = `${pct.toFixed(1)}% of ${settings.budget.toLocaleString('en-US')}`
   el.meterFill.style.width = pct + '%'
   el.meterFill.className = 'meter-fill' + (pct >= 100 ? ' over' : pct >= 80 ? ' warn' : '')
-  el.meterCost.textContent = lastCost > 0 ? `$${lastCost.toFixed(4)}` : ''
 }
 
 /* --------------------------------------------------------------------- sheet */
@@ -920,8 +1142,17 @@ function handleCommand(text) {
       showNotice(`compact ${compact ? 'on' : 'off'}`)
       return
     }
+    case 'clear': {
+      const last = messages[messages.length - 1]
+      if (sessionID && last?.id) {
+        clearedMessages[sessionID] = last.id
+        saveCleared()
+      }
+      showNotice('chat cleared · context kept')
+      return
+    }
     default:
-      showNotice('unknown command · try ?persona ?effort ?model ?version ?compact')
+      showNotice('unknown command · try ?persona ?effort ?model ?version ?compact ?clear')
   }
 }
 
@@ -1014,6 +1245,22 @@ el.gear.addEventListener('click', () => void openSheet())
 el.modelChip.addEventListener('click', () => void openSheet())
 el.close.addEventListener('click', closeSheet)
 
+el.notesToggle.addEventListener('click', () => {
+  notesOpen = !notesOpen
+  writeStore(NOTES_OPEN_KEY, notesOpen ? '1' : '0')
+  applyNotesOpen()
+})
+
+el.noteForm.addEventListener('submit', (event) => {
+  event.preventDefault()
+  addNote(el.noteInput.value)
+  el.noteInput.value = ''
+  el.noteInput.focus()
+})
+
+applyNotesOpen()
+renderNotes()
+
 el.sheet.addEventListener('click', (event) => {
   if (event.target === el.sheet) closeSheet()
 })
@@ -1029,7 +1276,7 @@ el.send.addEventListener('click', (event) => {
   }
 })
 
-el.updateBtn.addEventListener('click', () => void applyUpdate())
+el.updateBtn?.addEventListener('click', () => void applyUpdate())
 
 el.showTokens.addEventListener('change', () => {
   void save({ showTokens: el.showTokens.checked })
@@ -1165,7 +1412,7 @@ window.conv.onError((payload) => {
 window.conv.onUpdateProgress?.((payload) => {
   if (payload?.message) {
     updateNote = payload.message
-    renderMessages()
+    renderUpdate()
   }
 })
 
@@ -1181,6 +1428,16 @@ window.conv.init().then(async (result) => {
   if (PERSONAS.some((p) => p.id === stored)) settings.personality = stored
   normalizePersonality()
   customInstructions = loadCustom()
+  // Undo the earlier one-time violet default, then forget it.
+  try {
+    if (window.localStorage.getItem(ACCENT_KEY) === '1') {
+      settings.accent = 'slate'
+      window.localStorage.removeItem(ACCENT_KEY)
+      void window.conv.settings.set({ accent: 'slate' })
+    }
+  } catch {
+    /* nothing to restore */
+  }
   if (result?.sessionID) sessionID = result.sessionID
   if (Array.isArray(result?.sessions)) sessions = result.sessions
 
