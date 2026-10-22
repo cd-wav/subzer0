@@ -46,6 +46,7 @@ const el = {
   budget: document.getElementById('budget'),
   cmdMenu: document.getElementById('cmdMenu'),
   custom: document.getElementById('custom'),
+  updateBtn: document.getElementById('updateBtn'),
 }
 
 const THEMES = [
@@ -581,48 +582,42 @@ async function checkForUpdate() {
   } catch {
     /* offline, no gh, or an older host build: nothing to show */
   }
-  renderMessages()
+  renderUpdate()
 }
 
 async function applyUpdate() {
   if (updateBusy || !window.conv.updates) return
   updateBusy = true
   updateNote = 'downloading…'
-  renderMessages()
+  renderUpdate()
 
   try {
     const result = await window.conv.updates.apply()
     if (result && result.ok === false) {
       updateBusy = false
       updateNote = result.reason || 'update failed'
-      renderMessages()
+      renderUpdate()
     }
   } catch (cause) {
     updateBusy = false
     updateNote = String(cause?.message ?? cause)
-    renderMessages()
+    renderUpdate()
   }
 }
 
-function updateCard() {
-  const line = document.createElement('div')
-  line.className = 'update'
-
-  const text = document.createElement('span')
-  text.textContent = updateBusy
-    ? updateNote || 'updating…'
-    : updateNote || `subzer0 ${release?.latest} is available — you're on ${release?.current}`
-  line.appendChild(text)
-
-  const action = document.createElement('button')
-  action.type = 'button'
-  action.className = 'update-btn'
-  action.textContent = updateBusy ? 'updating…' : 'update'
-  action.disabled = updateBusy
-  action.addEventListener('click', () => void applyUpdate())
-  line.appendChild(action)
-
-  return line
+function renderUpdate() {
+  if (!el.updateBtn) return
+  if (updateBusy) {
+    el.updateBtn.textContent = updateNote || 'updating…'
+    el.updateBtn.disabled = true
+    el.updateBtn.hidden = false
+  } else if (release?.available) {
+    el.updateBtn.textContent = `update to v${release.latest}`
+    el.updateBtn.disabled = false
+    el.updateBtn.hidden = false
+  } else {
+    el.updateBtn.hidden = true
+  }
 }
 
 /* ------------------------------------------------------------------- messages */
@@ -667,11 +662,8 @@ function renderMessages() {
   const stick = el.log.scrollHeight - el.log.scrollTop - el.log.clientHeight < 90
   el.log.replaceChildren()
 
-  const showUpdate = Boolean(release?.available || updateBusy)
-
   if (!messages.length && !busy && !pending && !error && !notice) {
     el.log.appendChild(intro())
-    if (showUpdate) el.log.appendChild(updateCard())
     return
   }
 
@@ -746,8 +738,6 @@ function renderMessages() {
     line.textContent = notice
     el.log.appendChild(line)
   }
-
-  if (showUpdate) el.log.appendChild(updateCard())
 
   if (stick) el.log.scrollTop = el.log.scrollHeight
 }
@@ -1038,6 +1028,8 @@ el.send.addEventListener('click', (event) => {
     void window.conv.stop()
   }
 })
+
+el.updateBtn.addEventListener('click', () => void applyUpdate())
 
 el.showTokens.addEventListener('change', () => {
   void save({ showTokens: el.showTokens.checked })

@@ -112,18 +112,31 @@ async function applyUpdate(report = () => {}) {
   }
 
   const dir = path.join(app.getPath('temp'), `subzer0-update-${check.latest}`)
+  const setup = path.join(dir, check.asset)
   try {
     await fsp.rm(dir, { recursive: true, force: true })
     await fsp.mkdir(dir, { recursive: true })
 
     report(`Downloading subzer0 ${check.latest}…`)
+    // Download to the exe path itself: handing gh an existing directory makes
+    // it treat the folder as a clashing file. --clobber keeps retries clean.
     await run(
       'gh',
-      ['release', 'download', `v${check.latest}`, '--repo', REPO, '--pattern', check.asset, '--output', dir],
+      [
+        'release',
+        'download',
+        `v${check.latest}`,
+        '--repo',
+        REPO,
+        '--pattern',
+        check.asset,
+        '--output',
+        setup,
+        '--clobber',
+      ],
       { timeout: DOWNLOAD_TIMEOUT, windowsHide: true }
     )
 
-    const setup = path.join(dir, check.asset)
     await fsp.access(setup)
 
     report('Installing — the app will restart…')
