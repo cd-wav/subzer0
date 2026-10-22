@@ -21,7 +21,7 @@ const REPO = 'cd-wav/conv'
 /** The raw setup exe published next to the zip; the updater downloads this. */
 const assetName = (version) => `subzer0-Setup-${version}-win-x64.exe`
 const CHECK_TTL = 10 * 60 * 1000
-const DOWNLOAD_TIMEOUT = 15 * 60 * 1000
+const DOWNLOAD_TIMEOUT = 45 * 60 * 1000
 
 let checkCache = { at: 0, result: null }
 let applying = false
