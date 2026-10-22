@@ -5,7 +5,9 @@
 //   settings.get(), settings.set(patch),
 //   models.list(), models.select(model),
 //   sessions.list(), sessions.open(id),
-//   onUpdate(cb), onError(cb), onSettings(cb), onSessions(cb), onSandboxChange(cb)
+//   updates.check(), updates.apply(),
+//   onUpdate(cb), onError(cb), onSettings(cb), onSessions(cb),
+//   onUpdateProgress(cb), onSandboxChange(cb)
 //
 // onUpdate payload:
 //   { messages, tokens, cost, budget, settings, providers, busy }
@@ -25,6 +27,7 @@ const el = {
   sessionTitle: document.getElementById('sessionTitle'),
   newChat: document.getElementById('newChat'),
   sessions: document.getElementById('sessions'),
+  clearAll: document.getElementById('clearAll'),
   modelChip: document.getElementById('modelChip'),
   modelChipName: document.getElementById('modelChipName'),
   modelChipPlan: document.getElementById('modelChipPlan'),
@@ -103,6 +106,10 @@ let pending = null
 let error = null
 /** Message count when the error appeared, so a later reply clears it. */
 let errorAt = 0
+/** Latest release from window.conv.updates; drives the Update message. */
+let release = null
+let updateBusy = false
+let updateNote = ''
 
 /* ------------------------------------------------------------------ settings */
 
@@ -172,6 +179,35 @@ function selectedModel() {
 
 /* ------------------------------------------------------------------ sessions */
 
+// "Clear all" clears only subzer0's rail: session ids are hidden locally and
+// the OpenCode sessions themselves are never deleted. localStorage can be
+// unavailable in embedded contexts, so fall back to memory.
+const HIDDEN_KEY = 'subzer0.hidden-sessions'
+
+function loadHiddenSessions() {
+  try {
+    const raw = window.localStorage.getItem(HIDDEN_KEY)
+    const list = raw ? JSON.parse(raw) : []
+    return new Set(Array.isArray(list) ? list : [])
+  } catch {
+    return new Set()
+  }
+}
+
+let hiddenSessions = loadHiddenSessions()
+
+function persistHiddenSessions() {
+  try {
+    window.localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hiddenSessions]))
+  } catch {
+    /* memory-only is fine */
+  }
+}
+
+function visibleSessions() {
+  return sessions.filter((session) => !hiddenSessions.has(session.id))
+}
+
 function timeAgo(stamp) {
   if (!stamp) return ''
   const seconds = Math.max(0, Math.round((Date.now() - stamp) / 1000))
@@ -182,17 +218,23 @@ function timeAgo(stamp) {
 }
 
 function renderSessions() {
-  if (!sessions.length) {
+  const visible = visibleSessions()
+  el.clearAll.hidden = !visible.length
+
+  if (!visible.length) {
     el.sessions.innerHTML = '<p class="rail-empty">No conversations yet</p>'
     return
   }
 
   const frag = document.createDocumentFragment()
-  for (const session of sessions) {
+  for (const session of visible) {
+    const row = document.createElement('div')
+    row.className = 'session-row'
+    if (session.id === sessionID) row.setAttribute('aria-current', 'true')
+
     const button = document.createElement('button')
     button.type = 'button'
     button.className = 'session'
-    if (session.id === sessionID) button.setAttribute('aria-current', 'true')
 
     const name = document.createElement('span')
     name.className = 'session-name'
@@ -206,7 +248,21 @@ function renderSessions() {
     button.addEventListener('click', () => {
       void window.conv.sessions.open(session.id)
     })
-    frag.appendChild(button)
+
+    const del = document.createElement('button')
+    del.type = 'button'
+    del.className = 'session-del'
+    del.title = 'Delete conversation'
+    del.setAttribute('aria-label', `Delete ${session.title || 'conversation'}`)
+    del.innerHTML =
+      '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="m2.5 2.5 5 5m0-5-5 5"/></svg>'
+    del.addEventListener('click', (event) => {
+      event.stopPropagation()
+      void window.conv.sessions.remove(session.id)
+    })
+
+    row.append(button, del)
+    frag.appendChild(row)
   }
 
   el.sessions.replaceChildren(frag)
@@ -422,6 +478,66 @@ function renderSegments(container, options, current, onPick) {
   container.replaceChildren(frag)
 }
 
+/* ------------------------------------------------------------------ updates */
+
+/** Ask the host whether a newer subzer0 release is out. Quiet when it can't. */
+async function checkForUpdate() {
+  if (!window.conv.updates) return
+  try {
+    const result = await window.conv.updates.check()
+    if (result && result.ok) {
+      release = result
+      updateNote = ''
+    }
+  } catch {
+    /* offline, no gh, or an older host build: nothing to show */
+  }
+  renderMessages()
+}
+
+/** Download + reinstall the newest release; the app then relaunches itself. */
+async function applyUpdate() {
+  if (updateBusy || !window.conv.updates) return
+  updateBusy = true
+  updateNote = 'Downloading…'
+  renderMessages()
+
+  try {
+    const result = await window.conv.updates.apply()
+    if (result && result.ok === false) {
+      updateBusy = false
+      updateNote = result.reason || 'Update failed'
+      renderMessages()
+    }
+  } catch (cause) {
+    updateBusy = false
+    updateNote = String(cause?.message ?? cause)
+    renderMessages()
+  }
+  // On success the host quits and relaunches; nothing left to render.
+}
+
+function updateCard() {
+  const line = document.createElement('div')
+  line.className = 'update'
+
+  const text = document.createElement('span')
+  text.textContent = updateBusy
+    ? updateNote || 'Updating…'
+    : updateNote || `subzer0 ${release?.latest} is available — you're on ${release?.current}`
+  line.appendChild(text)
+
+  const action = document.createElement('button')
+  action.type = 'button'
+  action.className = 'update-btn'
+  action.textContent = updateBusy ? 'Updating…' : 'Update'
+  action.disabled = updateBusy
+  action.addEventListener('click', () => void applyUpdate())
+  line.appendChild(action)
+
+  return line
+}
+
 /* ------------------------------------------------------------------- messages */
 
 function intro() {
@@ -458,8 +574,11 @@ function renderMessages() {
   const stick = el.log.scrollHeight - el.log.scrollTop - el.log.clientHeight < 90
   el.log.replaceChildren()
 
+  const showUpdate = Boolean(release?.available || updateBusy)
+
   if (!messages.length && !busy && !pending && !error) {
     el.log.appendChild(intro())
+    if (showUpdate) el.log.appendChild(updateCard())
     return
   }
 
@@ -519,6 +638,8 @@ function renderMessages() {
 
     el.log.appendChild(line)
   }
+
+  if (showUpdate) el.log.appendChild(updateCard())
 
   if (stick) el.log.scrollTop = el.log.scrollHeight
 }
@@ -662,6 +783,32 @@ el.modelSearch.addEventListener('input', () => {
   renderModels()
 })
 
+// "Clear all" asks once (first click arms it for 4s). It only clears the rail
+// in this app — the OpenCode sessions are left untouched.
+let clearArmedAt = 0
+let clearArmTimer = null
+
+function disarmClear() {
+  clearArmedAt = 0
+  el.clearAll.classList.remove('arm')
+  el.clearAll.textContent = 'Clear all'
+}
+
+el.clearAll.addEventListener('click', () => {
+  if (Date.now() - clearArmedAt < 4000) {
+    disarmClear()
+    for (const session of visibleSessions()) hiddenSessions.add(session.id)
+    persistHiddenSessions()
+    renderSessions()
+    return
+  }
+  clearArmedAt = Date.now()
+  el.clearAll.classList.add('arm')
+  el.clearAll.textContent = 'Sure? Tap again'
+  if (clearArmTimer) clearTimeout(clearArmTimer)
+  clearArmTimer = setTimeout(disarmClear, 4000)
+})
+
 document.addEventListener('keydown', (event) => {
   const mod = event.ctrlKey || event.metaKey
   if (!mod) return
@@ -715,6 +862,16 @@ window.conv.onError((payload) => {
   renderMessages()
 })
 
+window.conv.onUpdateProgress?.((payload) => {
+  if (payload?.message) {
+    updateNote = payload.message
+    renderMessages()
+  }
+})
+
+// Re-check for new releases once in a while without waiting for a reload.
+setInterval(() => void checkForUpdate(), 6 * 60 * 60 * 1000)
+
 window.conv.init().then(async (result) => {
   if (result?.settings) {
     settings = result.settings
@@ -724,6 +881,7 @@ window.conv.init().then(async (result) => {
 
   applySettings()
   refreshSessions()
+  void checkForUpdate()
 
   const current = sessions.find((session) => session.id === sessionID)
   el.sessionTitle.textContent = current?.title || 'New chat'

@@ -23,6 +23,12 @@ const SKIP = new Set([
   path.join(RUNTIME_ROOT, 'resources', 'payload'),
 ])
 
+// `--update`: a silent reinstall launched by the app itself; `--install-dir=`
+// names the install location to refresh (defaults to the usual Programs dir).
+const UPDATE_MODE = process.argv.includes('--update')
+const DIR_ARG = process.argv.find((arg) => arg.startsWith('--install-dir='))
+const INSTALL_DIR = DIR_ARG ? path.resolve(DIR_ARG.slice('--install-dir='.length)) : null
+
 /** @type {BrowserWindow | null} */
 let win = null
 let busy = false
@@ -133,10 +139,27 @@ async function install(target, report) {
   let lastReport = 0
   const started = Date.now()
 
+  // The app being replaced may still be shutting down while we copy, so a
+  // locked file is retried for a while instead of failing the whole install.
+  const copyFileWithRetry = async (from, to) => {
+    const deadline = Date.now() + 30_000
+    for (;;) {
+      try {
+        await fsp.copyFile(from, to)
+        return
+      } catch (error) {
+        const locked =
+          error && (error.code === 'EBUSY' || error.code === 'EPERM' || error.code === 'EACCES')
+        if (!locked || Date.now() > deadline) throw error
+        await new Promise((resolve) => setTimeout(resolve, 400))
+      }
+    }
+  }
+
   const copyOne = async (from, to, step) => {
     const info = await fsp.stat(from)
     await fsp.mkdir(path.dirname(to), { recursive: true })
-    await fsp.copyFile(from, to)
+    await copyFileWithRetry(from, to)
     copied += info.size
 
     const now = Date.now()
@@ -233,9 +256,35 @@ ipcMain.handle('setup:open', async () => {
 ipcMain.on('window:minimize', () => win?.minimize())
 ipcMain.on('window:close', () => app.quit())
 
+/**
+ * Silent reinstall: refresh the installed app in place, then relaunch it.
+ * The user's sandbox (app files, settings, sessions) is not part of the
+ * payload, so it survives the update untouched.
+ */
+async function runUpdate() {
+  const target = INSTALL_DIR || defaultDir()
+  const exe = path.join(target, EXE_NAME)
+  try {
+    await install(target, () => {})
+  } catch (error) {
+    console.error('update failed:', (error && error.message) || error)
+    // The old app already quit; bring up whatever is installed now.
+  }
+  try {
+    spawn(exe, [], { detached: true, stdio: 'ignore' }).unref()
+  } catch (error) {
+    console.error('relaunch failed:', (error && error.message) || error)
+  }
+  setTimeout(() => app.quit(), 400)
+}
+
 /* --------------------------------------------------------------------- boot */
 
 app.whenReady().then(() => {
+  if (UPDATE_MODE) {
+    void runUpdate()
+    return
+  }
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

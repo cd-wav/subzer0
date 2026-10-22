@@ -11,9 +11,14 @@ These three files **are** the app the user is looking at. Edits appear instantly
 - Desktop web-app layout: a left rail (brand + logo, New chat, conversation list,
   model chip, Settings) beside a wide main column.
 - Top bar with the conversation title and a token readout; Stop appears while busy.
+- Sidebar conversations can be deleted (× on hover); "Clear all" empties the
+  rail locally and never deletes the OpenCode sessions (first click arms it,
+  second click confirms).
 - Message log is wide (max 880px) and centered; user messages right-aligned in a
   bordered bubble, assistant replies plain text.
 - Composer pinned at the bottom, token meter underneath — **on by default**.
+- When a newer subzer0 release is out, the log shows a quiet notice with an
+  "Update" button; pressing it downloads, reinstalls and relaunches.
 - Settings dialog: model (free / OpenCode Go / pay-per-token, grouped and
   searchable), reasoning effort, theme (dark/light), accent colour, density,
   text size, token counter toggle, token budget.
@@ -46,10 +51,15 @@ window.conv.models.list()           // every model + reasoning variants
 window.conv.models.select(model)    // switch model/variant, keeps history
 window.conv.sessions.list()         // recent conversations
 window.conv.sessions.open(id)       // switch conversation
+window.conv.sessions.remove(id)    // delete one conversation
+window.conv.sessions.clear()        // delete every conversation here
+window.conv.updates.check()         // { ok, current, latest, available, notes }
+window.conv.updates.apply()         // download + reinstall the newest release
 window.conv.onUpdate(cb)            // chat state
 window.conv.onSettings(cb)          // settings changed
 window.conv.onSessions(cb)          // { sessions, current }
 window.conv.onError(cb)             // { message, kind }
+window.conv.onUpdateProgress(cb)    // { message } while an update installs
 window.conv.onSandboxChange(cb)     // files changed on disk
 ```
 

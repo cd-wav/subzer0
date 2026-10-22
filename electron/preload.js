@@ -16,8 +16,11 @@ const { contextBridge, ipcRenderer } = require('electron')
  *   window.conv.settings.set(patch)   persist a partial settings object
  *   window.conv.models.list()         every free model + its reasoning variants
  *   window.conv.models.select(model)  switch model/variant, keeping history
+ *   window.conv.updates.check()       { ok, current, latest, available, notes }
+ *   window.conv.updates.apply()       download + reinstall the newest release
  *   window.conv.onUpdate(cb)          { messages, tokens, cost, budget, settings, busy }
  *   window.conv.onError(cb)           { message }
+ *   window.conv.onUpdateProgress(cb)  { message } while an update installs
  *   window.conv.onSandboxChange(cb)   the app's files changed on disk
  *
  * Message shape:
@@ -58,6 +61,8 @@ contextBridge.exposeInMainWorld('conv', {
   sessions: {
     list: () => ipcRenderer.invoke('sessions:list'),
     open: (id) => ipcRenderer.invoke('sessions:open', id),
+    remove: (id) => ipcRenderer.invoke('sessions:remove', id),
+    clear: () => ipcRenderer.invoke('sessions:clear'),
   },
 
   settings: {
@@ -67,6 +72,10 @@ contextBridge.exposeInMainWorld('conv', {
   models: {
     list: () => ipcRenderer.invoke('models:list'),
     select: (model) => ipcRenderer.invoke('settings:set', { model }),
+  },
+  updates: {
+    check: () => ipcRenderer.invoke('update:check'),
+    apply: () => ipcRenderer.invoke('update:apply'),
   },
 
   onSettings: (callback) => {
@@ -89,6 +98,9 @@ contextBridge.exposeInMainWorld('conv', {
   },
   onBuildStatus: (callback) => {
     ipcRenderer.on('build:status', (_event, payload) => callback(payload))
+  },
+  onUpdateProgress: (callback) => {
+    ipcRenderer.on('app:update-progress', (_event, payload) => callback(payload))
   },
 })
 

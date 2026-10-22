@@ -123,6 +123,12 @@ async function renameSession(sessionID, title) {
   return client.session.update({ sessionID, title })
 }
 
+/** Delete a conversation for good. */
+async function removeSession(sessionID) {
+  const client = await getClient()
+  return client.session.remove({ sessionID })
+}
+
 /** Recent conversations in this folder, newest first. */
 async function listSessions(directory, limit = 30) {
   const client = await getClient()
@@ -257,6 +263,7 @@ module.exports = {
   getSession,
   listSessions,
   renameSession,
+  removeSession,
   switchModel,
   compactSession,
   listMessages,

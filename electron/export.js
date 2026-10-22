@@ -67,11 +67,16 @@ contextBridge.exposeInMainWorld('conv', {
     set: async (patch) => Object.assign(settings, patch),
   },
   models: { list: async () => [], select: async () => settings },
+  updates: {
+    check: async () => ({ ok: false, current: settings ? '1.0.0' : '0.0.0', reason: 'standalone build' }),
+    apply: async () => ({ ok: false, reason: 'standalone build' }),
+  },
   onSettings: () => {},
   onUpdate: () => {},
   onError: () => {},
   onSandboxChange: () => {},
   onBuildStatus: () => {},
+  onUpdateProgress: () => {},
 })
 `
 

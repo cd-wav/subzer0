@@ -7,7 +7,7 @@
 // release assets are only downloadable by people with access.
 
 import { execFile } from 'node:child_process'
-import { readFile } from 'node:fs/promises'
+import { copyFile, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
@@ -21,6 +21,8 @@ const NOTES = (tag) => [
   '- Unzip, run "subzer0 Setup.exe", then launch subzer0 from the Start menu.',
   '- If OpenCode is not running, the app starts its own background service.',
   '- No API keys: it uses the free models your local OpenCode already has.',
+  '- Self-update is built in: the app checks GitHub and offers "Update" when a',
+  '  newer release lands (the raw .exe asset is what it downloads).',
 ].join('\n')
 
 async function main() {
@@ -29,14 +31,19 @@ async function main() {
   const version = pkg.version || '0.1.0'
   const tag = `v${version}`
   const zip = path.join(ROOT, 'out', `subzer0-Setup-${version}-win-x64.zip`)
+  // The bare exe rides along for the in-app updater, which downloads this
+  // exact name (see electron/update.js).
+  const exeAsset = path.join(ROOT, 'out', `subzer0-Setup-${version}-win-x64.exe`)
 
   console.log(`· building subzer0 ${tag}`)
   await run(process.execPath, [path.join(ROOT, 'scripts', 'build-setup.mjs'), '--zip'], {
     cwd: ROOT,
     stdio: 'inherit',
   })
+  await copyFile(path.join(ROOT, 'out', 'setup', 'subzer0 Setup.exe'), exeAsset)
+  console.log(`  ${exeAsset}`)
 
-  const args = ['release', 'create', tag, zip, '--title', `subzer0 ${tag}`, '--notes', NOTES(tag)]
+  const args = ['release', 'create', tag, zip, exeAsset, '--title', `subzer0 ${tag}`, '--notes', NOTES(tag)]
 
   if (dryRun) {
     console.log('\n· dry run, would execute:\n  gh ' + args.join(' '))
@@ -49,8 +56,8 @@ async function main() {
     console.log(`· released ${tag}`)
   } catch (error) {
     if (String(error.stderr || '').includes('already exists')) {
-      console.log(`· ${tag} already exists — uploading the asset instead`)
-      await run('gh', ['release', 'upload', tag, zip, '--clobber'], { cwd: ROOT, stdio: 'inherit' })
+      console.log(`· ${tag} already exists — uploading the assets instead`)
+      await run('gh', ['release', 'upload', tag, zip, exeAsset, '--clobber'], { cwd: ROOT, stdio: 'inherit' })
       console.log(`· updated ${tag}`)
     } else {
       throw error

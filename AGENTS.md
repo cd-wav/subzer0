@@ -48,12 +48,13 @@ button (export still exists as `window.conv.exportApp()`).
 | `electron/sandbox.js` | Creates/resets `sandbox/` from `electron/seed/` |
 | `electron/preload.js` | `window.conv` bridge + shadow-DOM reset control + recovery chat |
 | `electron/export.js` | Builds a standalone app folder (`resources/app` payload) |
-| `installer/` | Setup wizard: copies its own runtime + payload, makes shortcuts |
+| `electron/update.js` | Self-update: checks GitHub for a newer release, downloads + silently reinstalls |
+| `installer/` | Setup wizard: copies its own runtime + payload, makes shortcuts; `--update` = silent reinstall |
 | `electron/seed/` | Starting app: chat, settings dialog, two themes, plus its `AGENTS.md` |
 | `assets/` | Generated icon (`subzer0.png`, `subzer0.ico`) |
 | `scripts/smoke.mjs` | End-to-end test of the AI bridge, no UI |
 | `scripts/build-setup.mjs` | Assembles `out/setup/subzer0 Setup.exe` (+ `--zip`) |
-| `scripts/publish.mjs` | Builds the zip and publishes it as a GitHub release |
+| `scripts/publish.mjs` | Builds zip + exe and publishes both as a GitHub release (the exe feeds the in-app updater) |
 | `scripts/icon.mjs` | Renders the icon procedurally (PNG encoder + ICO container) |
 | `scripts/stamp-icon.mjs` | Stamps icon + version info onto the setup exe (`resedit`) |
 
@@ -68,7 +69,7 @@ npm run smoke            # verify the OpenCode bridge works
 npm run icon             # regenerate assets/subzer0.{png,ico}
 npm run setup            # build out/setup/subzer0 Setup.exe
 npm run release          # build + zip for distribution
-npm run publish:release  # build + upload the zip to a GitHub release
+npm run publish:release  # build + upload the zip and setup exe to a GitHub release
 ```
 
 Debugging the generated app (no devtools chrome in this app):
@@ -123,6 +124,13 @@ $env:CONV_DEBUG_PORT="9222"; npm run dev
   runtime (excluding `resources/app` and `resources/payload`), renames the root
   exe to `subzer0.exe`, drops the exported payload into `resources/app`, and
   creates desktop + Start menu shortcuts. It never touches the network.
+- Self-update: `window.conv.updates` + `electron/update.js` check the latest
+  GitHub release via the `gh` CLI (auth is gh's own; the repo is private).
+  `apply()` downloads the release's raw setup exe asset, runs it with
+  `--update --install-dir=<dir>` and quits; the installer retries files locked
+  by the exiting app, reinstalls in place and relaunches. The user's sandbox
+  (app files, settings, sessions) is not part of the payload, so it survives
+  updates. Exported standalone apps get stub `updates` methods.
 - The icon is generated from code, not a binary asset. `scripts/build-setup.mjs`
   stamps it (plus version info) onto the setup exe, so the installed
   `subzer0.exe` inherits it.

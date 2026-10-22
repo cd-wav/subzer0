@@ -8,6 +8,7 @@ const oc = require('./opencode')
 const { explainError } = require('./errors')
 const { exportApp } = require('./export')
 const { ROOT, APP_DIR, SETTINGS, ensureSandbox, resetApp } = require('./sandbox')
+const { checkUpdate, applyUpdate } = require('./update')
 
 /** Preferred model. Falls back to the user's configured default if missing. */
 const DEFAULT_MODEL = { providerID: 'opencode', id: 'deepseek-v4.1-flash-free', variant: 'default' }
@@ -504,6 +505,44 @@ ipcMain.handle('sessions:open', async (_event, id) => {
   return { ok: true }
 })
 
+ipcMain.handle('sessions:remove', async (_event, id) => {
+  if (typeof id !== 'string' || !id.startsWith('ses')) return { ok: false }
+  try {
+    await oc.removeSession(id)
+  } catch (cause) {
+    send('app:error', explainError(cause))
+    return { ok: false }
+  }
+  if (id === sessionID) {
+    // The open conversation was deleted: fall back to a fresh one.
+    if (running) await oc.interrupt(sessionID).catch(() => {})
+    running = false
+    sessionID = null
+    await ensureSession()
+  }
+  await pushSessions()
+  await pushState()
+  return { ok: true }
+})
+
+ipcMain.handle('sessions:clear', async () => {
+  try {
+    const list = await oc.listSessions(APP_DIR)
+    for (const session of list) {
+      await oc.removeSession(session.id).catch(() => {})
+    }
+  } catch (cause) {
+    send('app:error', explainError(cause))
+  }
+  if (sessionID && running) await oc.interrupt(sessionID).catch(() => {})
+  running = false
+  sessionID = null
+  await ensureSession()
+  await pushSessions()
+  await pushState()
+  return { ok: true }
+})
+
 ipcMain.handle('chat:new', async () => {
   if (running) await oc.interrupt(sessionID).catch(() => {})
   running = false
@@ -626,6 +665,14 @@ ipcMain.handle('budget:set', async (_event, value) => {
   }
   return { budget: settings.budget }
 })
+
+/* ------------------------------------------------------------------ update */
+
+ipcMain.handle('update:check', () => checkUpdate())
+
+ipcMain.handle('update:apply', () =>
+  applyUpdate((message) => send('app:update-progress', { message }))
+)
 
 /* --------------------------------------------------------------------- boot */
 

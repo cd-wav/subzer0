@@ -134,13 +134,44 @@ kbd {
   font-variant-numeric: tabular-nums;
 }
 
-.rail-label {
+.rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 18px 8px 6px;
+}
+
+.rail-head .rail-label {
+  padding: 0;
+}
+
+.rail-label {
   color: var(--muted);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+.clear-all {
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+
+.clear-all:hover,
+.clear-all.arm {
+  color: #ff8b8b;
+}
+
+.clear-all.arm {
+  font-weight: 500;
 }
 
 .sessions {
@@ -156,12 +187,23 @@ kbd {
   scrollbar-color: var(--line) transparent;
 }
 
+.session-row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.session-row .session {
+  flex: 1;
+  min-width: 0;
+}
+
 .session {
   display: flex;
   flex-direction: column;
   gap: 2px;
   width: 100%;
-  padding: 7px 9px;
+  padding: 7px 24px 7px 9px;
   border: 0;
   border-radius: 7px;
   background: transparent;
@@ -177,9 +219,35 @@ kbd {
   color: var(--fg);
 }
 
-.session[aria-current='true'] {
+.session-row[aria-current='true'] .session {
   background: var(--surface-2);
   color: var(--fg);
+}
+
+.session-del {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  display: none;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.session-row:hover .session-del,
+.session-del:focus-visible {
+  display: grid;
+}
+
+.session-del:hover {
+  color: #ff8b8b;
+  background: var(--surface-2);
 }
 
 .session-name {
@@ -493,6 +561,40 @@ kbd {
   background: color-mix(in srgb, #ff5c5c 12%, transparent);
 }
 
+.update {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: var(--gap);
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-size: 12.5px;
+}
+
+.update-btn {
+  flex: 0 0 auto;
+  padding: 4px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.update-btn:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.update-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 /* -------------------------------------------------------------------- dock */
 
 .dock {
@@ -669,6 +771,7 @@ textarea::placeholder {
 .model:focus,
 .theme:focus,
 .session:focus,
+.session-del:focus,
 .newchat:focus,
 .rail-btn:focus,
 .modelchip:focus,
@@ -684,6 +787,7 @@ textarea::placeholder {
 .model:focus-visible,
 .theme:focus-visible,
 .session:focus-visible,
+.session-del:focus-visible,
 .newchat:focus-visible,
 .rail-btn:focus-visible,
 .modelchip:focus-visible,
