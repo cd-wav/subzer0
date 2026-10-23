@@ -1,6 +1,6 @@
 {
   "name": "subzer0",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "private": true,
   "description": "An AI app that rewrites itself: talk to a local agent, watch it reshape the interface you are using.",
   "main": "electron/main.js",

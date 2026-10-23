@@ -11,12 +11,17 @@ These three files **are** the app the user is looking at. Edits appear instantly
 - Desktop web-app layout: a left rail (brand + logo, New chat, conversation list,
   model chip, Settings) beside a wide main column.
 - Top bar with the conversation title and a token readout; Stop appears while busy.
-- Sidebar conversations can be deleted (× on hover); "Clear all" empties the
-  rail locally and never deletes the OpenCode sessions (first click arms it,
-  second click confirms).
+- Sidebar conversations can be deleted (× on hover), pinned (a pin icon on hover,
+  pinned sort to the top) and searched; "Clear all" empties the rail locally and
+  never deletes the OpenCode sessions (first click arms it, second click confirms).
 - Message log is wide (max 880px) and centered; user messages right-aligned in a
-  bordered bubble, assistant replies plain text.
+  bordered bubble, assistant replies rendered as light markdown (headings, bold,
+  italic, inline code, lists, quotes, links and fenced code blocks).
 - Composer pinned at the bottom, token meter underneath — **on by default**.
+- A command palette (⌘P) fuzzy-searches every action: new chat, settings, theme,
+  density, notes, token counter, edit, clear.
+- Keyboard: ⌘K settings, ⌘N new chat, ⌘P commands, esc stops the turn, ↑ edits
+  your last message, / focuses the composer.
 - When a newer subzer0 release is out, the log shows a quiet notice with an
   "Update" button; pressing it downloads, reinstalls and relaunches.
 - Settings dialog: model (free / OpenCode Go / pay-per-token, grouped and

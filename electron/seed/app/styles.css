@@ -1749,7 +1749,14 @@ input[type='number']:focus {
 .note-del,
 input[type='checkbox'],
 input[type='checkbox']::after,
-input[type='number'] {
+input[type='number'],
+.rail-search,
+.session-pin,
+.palette-box,
+.palette-item,
+.palette-input,
+.intro-keys kbd,
+.md code.inline {
   border-radius: 0;
 }
 
@@ -1830,4 +1837,298 @@ textarea {
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1;
+}
+
+/* ------------------------------------------------------- markdown (assistant) */
+
+.msg.assistant.md {
+  white-space: normal;
+}
+
+.md p {
+  margin: 0 0 0.7em;
+  white-space: pre-wrap;
+}
+
+.md p:last-child {
+  margin-bottom: 0;
+}
+
+.md .md-heading {
+  margin: 1.1em 0 0.4em;
+  color: var(--fg);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.md h3.md-heading {
+  font-size: 15px;
+}
+
+.md h4.md-heading {
+  font-size: 13.5px;
+}
+
+.md h5.md-heading {
+  font-size: 12.5px;
+}
+
+.md .md-heading::before {
+  content: '# ';
+  color: var(--accent);
+}
+
+.md ul,
+.md ol {
+  margin: 0 0 0.7em;
+  padding-left: 1.5em;
+}
+
+.md li {
+  margin: 0.15em 0;
+  white-space: pre-wrap;
+}
+
+.md blockquote {
+  margin: 0 0 0.7em;
+  padding: 2px 0 2px 12px;
+  border-left: 2px solid var(--accent);
+  color: var(--muted);
+}
+
+.md blockquote p {
+  margin: 0.2em 0;
+}
+
+.md hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1em 0;
+}
+
+.md a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.md a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.md code.inline {
+  padding: 1px 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 0.92em;
+}
+
+.md strong {
+  font-weight: 600;
+}
+
+.md em {
+  font-style: italic;
+}
+
+/* -------------------------------------------------------------- command palette */
+
+.palette {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 16vh;
+  background: var(--overlay);
+  backdrop-filter: blur(3px);
+}
+
+.palette[hidden] {
+  display: none;
+}
+
+.palette-box {
+  width: min(560px, 92vw);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.palette-input {
+  width: 100%;
+  padding: 13px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: 13.5px;
+  outline: none;
+}
+
+.palette-input::placeholder {
+  color: var(--muted);
+}
+
+.palette-list {
+  max-height: 46vh;
+  overflow-y: auto;
+  padding: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.palette-item.active {
+  background: var(--surface-2);
+}
+
+.palette-tail {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.palette-item.active .palette-tail {
+  color: var(--accent);
+}
+
+.palette-empty {
+  padding: 12px 14px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+/* ----------------------------------------------------------- rail search + pin */
+
+.rail-search {
+  width: 100%;
+  margin: 0 0 6px;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.rail-search::placeholder {
+  color: var(--muted);
+}
+
+.rail-search:focus {
+  border-color: var(--accent);
+}
+
+.session-pin {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  display: none;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.session-row:hover .session-pin,
+.session-pin:focus-visible,
+.session-row[data-pinned='true'] .session-pin {
+  display: grid;
+}
+
+.session-row[data-pinned='true'] .session-pin {
+  color: var(--accent);
+}
+
+.session-pin:hover {
+  color: var(--fg);
+  background: var(--surface-2);
+}
+
+.session-row .session {
+  padding-right: 44px;
+}
+
+/* ------------------------------------------------------------- intro keys hint */
+
+.intro-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 26px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.intro-keys .key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.intro-keys kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: 10.5px;
+}
+
+/* --------------------------------------------------------------- polish pass */
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 1px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

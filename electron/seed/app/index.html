@@ -54,6 +54,15 @@
           <span class="rail-label" data-i18n="recent">recent</span>
           <button class="clear-all" id="clearAll" hidden data-i18n="clearAll">clear all</button>
         </div>
+        <input
+          class="rail-search"
+          id="sessionSearch"
+          type="search"
+          placeholder="search"
+          data-i18n-placeholder="searchSessions"
+          autocomplete="off"
+          spellcheck="false"
+        />
         <nav class="sessions" id="sessions" aria-label="recent" data-i18n-aria="recent">
           <p class="rail-empty" data-i18n="noChats">no conversations yet</p>
         </nav>
@@ -296,6 +305,21 @@
         </div>
       </div>
     </dialog>
+
+    <div class="palette" id="palette" hidden>
+      <div class="palette-box" role="dialog" aria-modal="true" aria-label="commands">
+        <input
+          class="palette-input"
+          id="paletteInput"
+          type="text"
+          placeholder="type a command…"
+          data-i18n-placeholder="palettePlaceholder"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <div class="palette-list" id="paletteList"></div>
+      </div>
+    </div>
 
     <script src="app.js"></script>
   </body>

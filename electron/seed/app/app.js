@@ -55,6 +55,10 @@ const el = {
   updateBtn: document.getElementById('updateBtn'),
   language: document.getElementById('language'),
   voice: document.getElementById('voice'),
+  sessionSearch: document.getElementById('sessionSearch'),
+  palette: document.getElementById('palette'),
+  paletteInput: document.getElementById('paletteInput'),
+  paletteList: document.getElementById('paletteList'),
 }
 
 const THEMES = [
@@ -1516,6 +1520,104 @@ const MESSAGES = {
     uk: 'закрити',
     zh: '关闭',
   },
+  palettePlaceholder: {
+    en: 'type a command…',
+    ru: 'введи команду…',
+    de: 'befehl eingeben…',
+    es: 'escribe un comando…',
+    fr: 'tape une commande…',
+    pt: 'digite um comando…',
+    it: 'digita un comando…',
+    nl: 'typ een commando…',
+    pl: 'wpisz komendę…',
+    tr: 'bir komut yaz…',
+    uk: 'введіть команду…',
+    zh: '输入命令…',
+  },
+  focusComposer: {
+    en: 'focus composer',
+    ru: 'в поле ввода',
+    de: 'zum eingabefeld',
+    es: 'ir al campo',
+    fr: 'aller à la saisie',
+    pt: 'ir ao campo',
+    it: 'vai al campo',
+    nl: 'naar invoerveld',
+    pl: 'przejdź do pola',
+    tr: 'giriş alanına git',
+    uk: 'до поля вводу',
+    zh: '聚焦输入框',
+  },
+  searchSessions: {
+    en: 'search',
+    ru: 'поиск',
+    de: 'suchen',
+    es: 'buscar',
+    fr: 'chercher',
+    pt: 'buscar',
+    it: 'cerca',
+    nl: 'zoeken',
+    pl: 'szukaj',
+    tr: 'ara',
+    uk: 'пошук',
+    zh: '搜索',
+  },
+  pinChat: {
+    en: 'pin conversation',
+    ru: 'закрепить',
+    de: 'anheften',
+    es: 'fijar',
+    fr: 'épingler',
+    pt: 'fixar',
+    it: 'fissa',
+    nl: 'vastzetten',
+    pl: 'przypnij',
+    tr: 'sabitle',
+    uk: 'закріпити',
+    zh: '置顶',
+  },
+  unpinChat: {
+    en: 'unpin conversation',
+    ru: 'открепить',
+    de: 'lösen',
+    es: 'desfijar',
+    fr: 'désépingler',
+    pt: 'desafixar',
+    it: 'sfissa',
+    nl: 'losmaken',
+    pl: 'odepnij',
+    tr: 'sabitlemeyi kaldır',
+    uk: 'відкріпити',
+    zh: '取消置顶',
+  },
+  commands: {
+    en: 'commands',
+    ru: 'команды',
+    de: 'befehle',
+    es: 'comandos',
+    fr: 'commandes',
+    pt: 'comandos',
+    it: 'comandi',
+    nl: 'commando’s',
+    pl: 'komendy',
+    tr: 'komutlar',
+    uk: 'команди',
+    zh: '命令',
+  },
+  noMatches: {
+    en: 'no matches',
+    ru: 'нет совпадений',
+    de: 'keine treffer',
+    es: 'sin resultados',
+    fr: 'aucun résultat',
+    pt: 'sem resultados',
+    it: 'nessun risultato',
+    nl: 'geen resultaten',
+    pl: 'brak wyników',
+    tr: 'eşleşme yok',
+    uk: 'немає збігів',
+    zh: '无匹配',
+  },
 }
 
 const LANGUAGE_KEY = 'subzer0.language'
@@ -1839,8 +1941,42 @@ function persistHiddenSessions() {
   }
 }
 
+const PINNED_KEY = 'subzer0.pinned-sessions'
+
+function loadPinnedSessions() {
+  try {
+    const raw = window.localStorage.getItem(PINNED_KEY)
+    const list = raw ? JSON.parse(raw) : []
+    return new Set(Array.isArray(list) ? list : [])
+  } catch {
+    return new Set()
+  }
+}
+
+let pinnedSessions = loadPinnedSessions()
+
+function persistPinnedSessions() {
+  try {
+    window.localStorage.setItem(PINNED_KEY, JSON.stringify([...pinnedSessions]))
+  } catch {
+    /* memory-only is fine */
+  }
+}
+
+let sessionQuery = ''
+
 function visibleSessions() {
-  return sessions.filter((session) => !hiddenSessions.has(session.id))
+  const query = sessionQuery.trim().toLowerCase()
+  const visible = sessions.filter((session) => !hiddenSessions.has(session.id))
+  const filtered = query
+    ? visible.filter((session) => (session.title || '').toLowerCase().includes(query))
+    : visible
+  const pinned = []
+  const rest = []
+  for (const session of filtered) {
+    ;(pinnedSessions.has(session.id) ? pinned : rest).push(session)
+  }
+  return [...pinned, ...rest]
 }
 
 function timeAgo(stamp) {
@@ -1871,6 +2007,7 @@ function renderSessions() {
     const row = document.createElement('div')
     row.className = 'session-row'
     if (session.id === sessionID) row.setAttribute('aria-current', 'true')
+    if (pinnedSessions.has(session.id)) row.dataset.pinned = 'true'
 
     const button = document.createElement('button')
     button.type = 'button'
@@ -1889,6 +2026,22 @@ function renderSessions() {
       void window.conv.sessions.open(session.id)
     })
 
+    const pin = document.createElement('button')
+    pin.type = 'button'
+    pin.className = 'session-pin'
+    const pinned = pinnedSessions.has(session.id)
+    pin.title = pinned ? t('unpinChat') : t('pinChat')
+    pin.setAttribute('aria-pressed', String(pinned))
+    pin.innerHTML =
+      '<svg width="11" height="11" viewBox="0 0 14 14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M9 3 4 8M8 2.5l3.5 3.5M6.5 3l-4 4L1 9.5l3.5 3.5L7 11l4-4M5 5l4 4"/></svg>'
+    pin.addEventListener('click', (event) => {
+      event.stopPropagation()
+      if (pinnedSessions.has(session.id)) pinnedSessions.delete(session.id)
+      else pinnedSessions.add(session.id)
+      persistPinnedSessions()
+      renderSessions()
+    })
+
     const del = document.createElement('button')
     del.type = 'button'
     del.className = 'session-del'
@@ -1901,7 +2054,7 @@ function renderSessions() {
       void window.conv.sessions.remove(session.id)
     })
 
-    row.append(button, del)
+    row.append(button, pin, del)
     frag.appendChild(row)
   }
 
@@ -2343,7 +2496,26 @@ function intro() {
     hints.appendChild(chip)
   }
 
-  wrap.append(title, line, examplesLabel, hints)
+  const keys = document.createElement('div')
+  keys.className = 'intro-keys'
+  const shortcuts = [
+    ['⌘P', t('commands')],
+    ['⌘K', t('settingsTitle')],
+    ['⌘N', t('newChat')],
+    ['esc', t('stop')],
+    ['↑', t('edit')],
+    ['/', t('focusComposer')],
+  ]
+  for (const [key, label] of shortcuts) {
+    const row = document.createElement('span')
+    row.className = 'key'
+    const kbd = document.createElement('kbd')
+    kbd.textContent = key
+    row.append(kbd, document.createTextNode(' ' + label))
+    keys.appendChild(row)
+  }
+
+  wrap.append(title, line, examplesLabel, hints, keys)
   return wrap
 }
 
@@ -2529,32 +2701,181 @@ function renderSpend() {
   el.meter.hidden = !settings.showTokens && !(lastCost > 0)
 }
 
-function renderAssistantText(container, text) {
-  const parts = text.split(/```/)
-  for (let i = 0; i < parts.length; i++) {
-    if (i % 2 === 1) {
-      const pre = document.createElement('pre')
-      pre.className = 'code'
+function addCodeBlock(container, code) {
+  const pre = document.createElement('pre')
+  pre.className = 'code'
+  const inner = document.createElement('code')
+  inner.textContent = code.replace(/\n$/, '')
+  const btn = document.createElement('button')
+  btn.type = 'button'
+  btn.className = 'code-copy'
+  btn.textContent = t('copy')
+  btn.addEventListener('click', () => {
+    if (navigator.clipboard) navigator.clipboard.writeText(inner.textContent).catch(() => {})
+    btn.textContent = t('copied')
+    setTimeout(() => (btn.textContent = t('copy')), 1200)
+  })
+  pre.append(btn, inner)
+  container.appendChild(pre)
+}
+
+/** Inline markdown: `code`, **bold**, __bold__, *italic*, _italic_, [text](url). */
+function appendInline(parent, text) {
+  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(__[^_]+__)|(\*[^*]+\*)|(_[^_]+_)|(\[[^\]]+\]\([^)\s]+\))/g
+  let last = 0
+  let match
+  while ((match = re.exec(text))) {
+    if (match.index > last) parent.appendChild(document.createTextNode(text.slice(last, match.index)))
+    last = match.index + match[0].length
+    const token = match[0]
+    if (token.startsWith('`') && token.endsWith('`') && token.length > 2) {
       const code = document.createElement('code')
-      code.textContent = parts[i].replace(/^[^\n]*\n/, '')
-      const btn = document.createElement('button')
-      btn.type = 'button'
-      btn.className = 'code-copy'
-      btn.textContent = t('copy')
-      btn.addEventListener('click', () => {
-        if (navigator.clipboard) navigator.clipboard.writeText(code.textContent).catch(() => {})
-        btn.textContent = t('copied')
-        setTimeout(() => (btn.textContent = t('copy')), 1200)
-      })
-      pre.append(btn, code)
-      container.appendChild(pre)
-    } else if (parts[i].trim()) {
-      const bubble = document.createElement('div')
-      bubble.className = 'msg assistant'
-      bubble.textContent = parts[i]
-      container.appendChild(bubble)
+      code.className = 'inline'
+      code.textContent = token.slice(1, -1)
+      parent.appendChild(code)
+    } else if (token.startsWith('**') && token.length > 4) {
+      const bold = document.createElement('strong')
+      bold.textContent = token.slice(2, -2)
+      parent.appendChild(bold)
+    } else if (token.startsWith('__') && token.length > 4) {
+      const bold = document.createElement('strong')
+      bold.textContent = token.slice(2, -2)
+      parent.appendChild(bold)
+    } else if (token.startsWith('*') && token.length > 2) {
+      const em = document.createElement('em')
+      em.textContent = token.slice(1, -1)
+      parent.appendChild(em)
+    } else if (token.startsWith('_') && token.length > 2) {
+      const em = document.createElement('em')
+      em.textContent = token.slice(1, -1)
+      parent.appendChild(em)
+    } else if (token.startsWith('[')) {
+      const link = token.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/)
+      if (link) {
+        const label = link[1]
+        const url = link[2]
+        if (/^(https?|mailto):/i.test(url)) {
+          const anchor = document.createElement('a')
+          anchor.href = url
+          anchor.textContent = label
+          anchor.target = '_blank'
+          anchor.rel = 'noopener noreferrer'
+          parent.appendChild(anchor)
+        } else {
+          parent.appendChild(document.createTextNode(label))
+        }
+      }
     }
   }
+  if (last < text.length) parent.appendChild(document.createTextNode(text.slice(last)))
+}
+
+const isFence = (line) => /^\s*```/.test(line)
+const isHr = (line) => /^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)
+const isQuote = (line) => /^\s*>\s?/.test(line)
+const isBullet = (line) => /^\s*[-*+]\s+/.test(line)
+const isOrdered = (line) => /^\s*\d+[.)]\s+/.test(line)
+
+/** Block-level markdown: code fences, headings, lists, quotes, rules, paragraphs. */
+function renderMarkdown(container, text) {
+  const lines = text.split('\n')
+  let i = 0
+  while (i < lines.length) {
+    const line = lines[i]
+    const trimmed = line.trim()
+
+    if (isFence(line)) {
+      const buffer = []
+      i++
+      while (i < lines.length && !/^\s*```\s*$/.test(lines[i].trim())) {
+        buffer.push(lines[i])
+        i++
+      }
+      i++ // closing fence
+      addCodeBlock(container, buffer.join('\n'))
+      continue
+    }
+
+    const heading = line.match(/^(#{1,3})\s+(.*)$/)
+    if (heading) {
+      const level = heading[1].length
+      const el = document.createElement(level === 1 ? 'h3' : level === 2 ? 'h4' : 'h5')
+      el.className = 'md-heading'
+      appendInline(el, heading[2])
+      container.appendChild(el)
+      i++
+      continue
+    }
+
+    if (isHr(line)) {
+      container.appendChild(document.createElement('hr'))
+      i++
+      continue
+    }
+
+    if (isQuote(line)) {
+      const quote = document.createElement('blockquote')
+      while (i < lines.length && isQuote(lines[i])) {
+        const p = document.createElement('p')
+        appendInline(p, lines[i].replace(/^\s*>\s?/, ''))
+        quote.appendChild(p)
+        i++
+      }
+      container.appendChild(quote)
+      continue
+    }
+
+    if (isBullet(line) || isOrdered(line)) {
+      const ordered = isOrdered(line)
+      const list = document.createElement(ordered ? 'ol' : 'ul')
+      while (i < lines.length) {
+        const current = lines[i].trim()
+        if (ordered && isOrdered(lines[i])) {
+          const li = document.createElement('li')
+          appendInline(li, current.replace(/^\d+[.)]\s+/, ''))
+          list.appendChild(li)
+          i++
+        } else if (!ordered && isBullet(lines[i])) {
+          const li = document.createElement('li')
+          appendInline(li, current.replace(/^[-*+]\s+/, ''))
+          list.appendChild(li)
+          i++
+        } else break
+      }
+      container.appendChild(list)
+      continue
+    }
+
+    if (!trimmed) {
+      i++
+      continue
+    }
+
+    const para = []
+    while (
+      i < lines.length &&
+      lines[i].trim() &&
+      !isFence(lines[i]) &&
+      !/^#{1,3}\s+/.test(lines[i]) &&
+      !isHr(lines[i]) &&
+      !isQuote(lines[i]) &&
+      !isBullet(lines[i]) &&
+      !isOrdered(lines[i])
+    ) {
+      para.push(lines[i])
+      i++
+    }
+    const p = document.createElement('p')
+    appendInline(p, para.join('\n'))
+    container.appendChild(p)
+  }
+}
+
+function renderAssistantText(container, text) {
+  const wrap = document.createElement('div')
+  wrap.className = 'msg assistant md'
+  renderMarkdown(wrap, text)
+  container.appendChild(wrap)
 }
 
 function renderCmdMenu() {
@@ -2630,6 +2951,182 @@ async function openSheet() {
 
 function closeSheet() {
   if (el.sheet.open) el.sheet.close()
+}
+
+/* ---------------------------------------------------------------- palette */
+
+let paletteIndex = 0
+let paletteItems = []
+
+function paletteActions() {
+  const entries = []
+  const activeTheme = themeMode ?? settings.theme
+
+  entries.push({
+    id: 'new',
+    label: t('newChat'),
+    hint: '⌘N',
+    run: () => window.conv.newChat(),
+  })
+  entries.push({
+    id: 'settings',
+    label: t('settingsTitle'),
+    hint: '⌘K',
+    run: () => openSheet(),
+  })
+  entries.push({
+    id: 'focus',
+    label: t('focusComposer'),
+    hint: '/',
+    run: () => el.input.focus(),
+  })
+  entries.push({
+    id: 'edit',
+    label: t('edit'),
+    hint: '↑',
+    run: () => {
+      const text = lastUserMessageText()
+      if (text) {
+        el.input.value = text
+        autosize()
+        el.input.focus()
+      }
+    },
+  })
+  entries.push({
+    id: 'notes',
+    label: t('notesTitle'),
+    active: notesOpen,
+    run: () => {
+      notesOpen = !notesOpen
+      writeStore(NOTES_OPEN_KEY, notesOpen ? '1' : '0')
+      applyNotesOpen()
+    },
+  })
+  entries.push({
+    id: 'tokens',
+    label: t('tokenCounter'),
+    active: settings.showTokens,
+    run: () => void save({ showTokens: !settings.showTokens }),
+  })
+  for (const theme of THEMES) {
+    entries.push({
+      id: `theme-${theme.id}`,
+      label: t(theme.nameKey),
+      active: activeTheme === theme.id,
+      run: () => {
+        if (theme.id === 'system') {
+          themeMode = 'system'
+          try {
+            window.localStorage.setItem(THEME_MODE_KEY, 'system')
+          } catch {
+            /* memory-only is fine */
+          }
+          applySettings()
+        } else {
+          themeMode = null
+          try {
+            window.localStorage.removeItem(THEME_MODE_KEY)
+          } catch {
+            /* memory-only is fine */
+          }
+          void save({ theme: theme.id })
+        }
+      },
+    })
+  }
+  for (const density of DENSITIES) {
+    entries.push({
+      id: `density-${density.id}`,
+      label: t(density.nameKey),
+      active: settings.density === density.id,
+      run: () => void save({ density: density.id }),
+    })
+  }
+  entries.push({
+    id: 'clear',
+    label: t('clearAll'),
+    run: () => {
+      for (const session of visibleSessions()) hiddenSessions.add(session.id)
+      persistHiddenSessions()
+      renderSessions()
+    },
+  })
+  return entries
+}
+
+function openPalette() {
+  if (!el.palette) return
+  el.palette.hidden = false
+  el.paletteInput.value = ''
+  renderPalette('')
+  el.paletteInput.focus()
+}
+
+function closePalette() {
+  if (!el.palette) return
+  el.palette.hidden = true
+  el.paletteInput.value = ''
+}
+
+function renderPalette(query) {
+  const q = query.trim().toLowerCase()
+  paletteItems = paletteActions().filter((item) => !q || item.label.toLowerCase().includes(q))
+  paletteIndex = 0
+  const frag = document.createDocumentFragment()
+  paletteItems.forEach((item, index) => {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'palette-item'
+    if (index === paletteIndex) button.classList.add('active')
+    button.dataset.index = String(index)
+
+    const label = document.createElement('span')
+    label.className = 'palette-label'
+    label.textContent = item.label
+
+    const tail = document.createElement('span')
+    tail.className = 'palette-tail'
+    if (item.active) tail.textContent = 'on'
+    else if (item.hint) tail.textContent = item.hint
+
+    button.append(label, tail)
+    button.addEventListener('click', () => {
+      closePalette()
+      item.run()
+    })
+    button.addEventListener('mousemove', () => {
+      if (Number(button.dataset.index) !== paletteIndex) {
+        paletteIndex = Number(button.dataset.index)
+        paintPaletteSelection()
+      }
+    })
+    frag.appendChild(button)
+  })
+
+  if (!paletteItems.length) {
+    const empty = document.createElement('p')
+    empty.className = 'palette-empty'
+    empty.textContent = t('noMatches')
+    frag.appendChild(empty)
+  }
+
+  el.paletteList.replaceChildren(frag)
+  paintPaletteSelection()
+}
+
+function paintPaletteSelection() {
+  const nodes = el.paletteList.querySelectorAll('.palette-item')
+  nodes.forEach((node, index) => node.classList.toggle('active', index === paletteIndex))
+  const active = el.paletteList.querySelector('.palette-item.active')
+  if (active) active.scrollIntoView({ block: 'nearest' })
+}
+
+function paletteRun() {
+  const item = paletteItems[paletteIndex]
+  if (!item) return
+  closePalette()
+  item.run()
 }
 
 /* --------------------------------------------------------------------- submit */
@@ -2838,6 +3335,37 @@ el.language?.addEventListener('change', () => {
 renderLanguageOptions()
 applyLanguage()
 
+el.sessionSearch?.addEventListener('input', () => {
+  sessionQuery = el.sessionSearch.value
+  renderSessions()
+})
+
+el.paletteInput?.addEventListener('input', () => {
+  renderPalette(el.paletteInput.value)
+})
+
+el.paletteInput?.addEventListener('keydown', (event) => {
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    paletteIndex = Math.min(paletteItems.length - 1, paletteIndex + 1)
+    paintPaletteSelection()
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    paletteIndex = Math.max(0, paletteIndex - 1)
+    paintPaletteSelection()
+  } else if (event.key === 'Enter') {
+    event.preventDefault()
+    paletteRun()
+  } else if (event.key === 'Escape') {
+    event.preventDefault()
+    closePalette()
+  }
+})
+
+el.palette?.addEventListener('mousedown', (event) => {
+  if (event.target === el.palette) closePalette()
+})
+
 el.sheet.addEventListener('click', (event) => {
   if (event.target === el.sheet) closeSheet()
 })
@@ -2964,16 +3492,70 @@ el.clearAll.addEventListener('click', () => {
   clearArmTimer = setTimeout(disarmClear, 4000)
 })
 
+function lastUserMessageText() {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].type === 'user') {
+      const text = cleanUserText(messages[i].text ?? messages[i].payload?.text)
+      if (text) return text
+    }
+  }
+  return ''
+}
+
 document.addEventListener('keydown', (event) => {
   const mod = event.ctrlKey || event.metaKey
-  if (!mod) return
-  if (event.key.toLowerCase() === 'k') {
+  const target = event.target
+  const typing =
+    target &&
+    (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable)
+
+  if (mod && event.key.toLowerCase() === 'k') {
     event.preventDefault()
     void openSheet()
+    return
   }
-  if (event.key.toLowerCase() === 'n') {
+  if (mod && event.key.toLowerCase() === 'n') {
     event.preventDefault()
     void window.conv.newChat()
+    return
+  }
+  if (mod && event.key.toLowerCase() === 'p') {
+    event.preventDefault()
+    openPalette()
+    return
+  }
+  if (mod) return
+
+  // "/" focuses the composer when not already typing.
+  if (event.key === '/' && !typing) {
+    event.preventDefault()
+    el.input.focus()
+    return
+  }
+
+  if (event.key === 'Escape') {
+    if (!el.palette.hidden) {
+      closePalette()
+      return
+    }
+    if (el.sheet.open) {
+      closeSheet()
+      return
+    }
+    if (busy) {
+      void window.conv.stop()
+      return
+    }
+    el.input.blur()
+    return
+  }
+
+  // ↑ in an empty composer reloads the last message for editing.
+  if (event.key === 'ArrowUp' && typing && el.input === target && el.input.value === '') {
+    event.preventDefault()
+    el.input.value = lastUserMessageText()
+    autosize()
+    renderCmdMenu()
   }
 })
 
