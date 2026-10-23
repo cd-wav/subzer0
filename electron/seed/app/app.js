@@ -2381,6 +2381,10 @@ async function checkForUpdate() {
     if (result && result.ok) {
       release = result
       updateNote = ''
+      // Auto-update: install the newest release in the background whenever one
+      // is available, no click needed. Skip only while a turn is in flight so
+      // an active reply is never cut off mid-generation.
+      if (result.available && !busy) void applyUpdate()
     }
   } catch {
     /* offline, no gh, or an older host build: nothing to show */

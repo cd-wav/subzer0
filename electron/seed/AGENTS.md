@@ -22,8 +22,9 @@ These three files **are** the app the user is looking at. Edits appear instantly
   density, notes, token counter, edit, clear.
 - Keyboard: ⌘K settings, ⌘N new chat, ⌘P commands, esc stops the turn, ↑ edits
   your last message, / focuses the composer.
-- When a newer subzer0 release is out, the log shows a quiet notice with an
-  "Update" button; pressing it downloads, reinstalls and relaunches.
+- When a newer subzer0 release is out, the app updates itself automatically in
+  the background (download + reinstall + relaunch, no click needed); the update
+  button in the top bar shows progress while it installs.
 - Settings dialog: model (free / OpenCode Go / pay-per-token, grouped and
   searchable), language, reasoning effort, theme (dark/light/system), accent
   colour, density, text size, token counter toggle, token budget.
