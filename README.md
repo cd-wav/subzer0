@@ -1,11 +1,9 @@
 ﻿# subzer0
 
-an open-source ai app that rewrites itself.
+an open-source ai app that can rewrite itself.
 
-you open it and get a dark, quiet chat window. tell the ai what you want — "add
-a sidebar", "make it look like a terminal" — and it edits the app you are
-looking at. the window reloads and the change is there. the whole ui is three
-plain files, and the ai can rewrite any of them.
+you open it, and meet the basic ui. dont like it? REWRITE IT. ask the ai to change
+the ui of the app, and it does that. "make the ui purple" and it makes it purple.
 
 no api keys, no model downloads. it drives [opencode](https://opencode.ai), the
 coding agent on your machine, and uses every model opencode can see — free,
