@@ -12,6 +12,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { createHash } from 'node:crypto'
 import { stamp } from './stamp-icon.mjs'
 
 const run = promisify(execFile)
@@ -66,6 +67,38 @@ async function dirSize(dir) {
     }
   }
   return total
+}
+
+function sha256(data) {
+  return createHash('sha256').update(data).digest('hex')
+}
+
+async function fileSha256(file) {
+  return sha256(await readFile(file))
+}
+
+/** Stable fingerprint of a directory tree (paths + sizes), for change detection. */
+async function dirHash(dir) {
+  const lines = []
+  async function visit(current) {
+    const entries = await readdir(current, { withFileTypes: true }).catch(() => [])
+    entries.sort((a, b) => a.name.localeCompare(b.name))
+    for (const entry of entries) {
+      const full = path.join(current, entry.name)
+      if (entry.isDirectory()) {
+        await visit(full)
+      } else {
+        try {
+          const info = await stat(full)
+          lines.push(`${path.relative(dir, full).split(path.sep).join('/')}:${info.size}`)
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  }
+  await visit(dir)
+  return sha256(lines.join('\n'))
 }
 
 /** Copy the host app (minus dev-only bits) into the installer payload. */
@@ -131,6 +164,39 @@ async function main() {
 
   console.log('· bundling app payload')
   const payload = await writePayload(path.join(OUT, 'resources', 'payload', 'app'))
+
+  // Record what this build's runtime and node_modules look like, so the updater
+  // can ship just the app files when they are unchanged.
+  const payloadApp = path.join(OUT, 'resources', 'payload', 'app')
+  const electronVersion = JSON.parse(
+    await readFile(path.join(ROOT, 'node_modules', 'electron', 'package.json'), 'utf8')
+  ).version
+  const modulesHash = await dirHash(path.join(payloadApp, 'node_modules'))
+  const buildInfo = { version, electronVersion, modulesHash }
+  await writeFile(
+    path.join(payloadApp, 'build-info.json'),
+    JSON.stringify(buildInfo, null, 2) + '\n',
+    'utf8'
+  )
+
+  // A slim app-only archive (no Electron runtime, no node_modules) is what the
+  // in-app updater downloads for the common case where only the app changed.
+  console.log('· building app-only archive')
+  const appZip = path.join(ROOT, 'out', `subzer0-app-${version}.zip`)
+  const appManifest = path.join(ROOT, 'out', `subzer0-app-${version}.json`)
+  const appStage = path.join(ROOT, 'out', 'appzip', 'app')
+  await rm(path.join(ROOT, 'out', 'appzip'), { recursive: true, force: true })
+  await cp(payloadApp, appStage, { recursive: true })
+  await rm(path.join(appStage, 'node_modules'), { recursive: true, force: true })
+  await rm(appZip, { force: true })
+  await run('tar', ['-a', '-c', '-f', appZip, '-C', appStage, '.'])
+  const zipSize = (await stat(appZip)).size
+  await writeFile(
+    appManifest,
+    JSON.stringify({ ...buildInfo, size: zipSize, sha256: await fileSha256(appZip) }, null, 2) + '\n',
+    'utf8'
+  )
+  console.log(`  ${appZip} (${(zipSize / 1024 / 1024).toFixed(1)} MB)`)
 
   const size = await dirSize(OUT)
   console.log(`· setup folder ready (${(size / 1024 / 1024).toFixed(0)} MB)`)

@@ -34,6 +34,9 @@ async function main() {
   // The bare exe rides along for the in-app updater, which downloads this
   // exact name (see electron/update.js).
   const exeAsset = path.join(ROOT, 'out', `subzer0-Setup-${version}-win-x64.exe`)
+  // The slim app archive + its manifest drive the fast in-place update.
+  const appZip = path.join(ROOT, 'out', `subzer0-app-${version}.zip`)
+  const appJson = path.join(ROOT, 'out', `subzer0-app-${version}.json`)
 
   console.log(`· building subzer0 ${tag}`)
   await run(process.execPath, [path.join(ROOT, 'scripts', 'build-setup.mjs'), '--zip'], {
@@ -43,7 +46,7 @@ async function main() {
   await copyFile(path.join(ROOT, 'out', 'setup', 'subzer0 Setup.exe'), exeAsset)
   console.log(`  ${exeAsset}`)
 
-  const args = ['release', 'create', tag, zip, exeAsset, '--title', `subzer0 ${tag}`, '--notes', NOTES(tag)]
+  const args = ['release', 'create', tag, zip, exeAsset, appZip, appJson, '--title', `subzer0 ${tag}`, '--notes', NOTES(tag)]
 
   if (dryRun) {
     console.log('\n· dry run, would execute:\n  gh ' + args.join(' '))
@@ -57,7 +60,7 @@ async function main() {
   } catch (error) {
     if (String(error.stderr || '').includes('already exists')) {
       console.log(`· ${tag} already exists — uploading the assets instead`)
-      await run('gh', ['release', 'upload', tag, zip, exeAsset, '--clobber'], { cwd: ROOT, stdio: 'inherit' })
+      await run('gh', ['release', 'upload', tag, zip, exeAsset, appZip, appJson, '--clobber'], { cwd: ROOT, stdio: 'inherit' })
       console.log(`· updated ${tag}`)
     } else {
       throw error

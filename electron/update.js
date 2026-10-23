@@ -23,8 +23,12 @@ const run = promisify(execFile)
 
 /** Private repo — asset downloads need the gh CLI's credentials. */
 const REPO = 'cd-wav/conv'
-/** The raw setup exe published next to the zip; the updater downloads this. */
+/** The raw setup exe published next to the zip; the full-reinstall fallback. */
 const assetName = (version) => `subzer0-Setup-${version}-win-x64.exe`
+/** A tiny zip of just the app (no Electron runtime, no node_modules). */
+const appAssetName = (version) => `subzer0-app-${version}.zip`
+/** A tiny json describing the app zip, so we can skip it when nothing changed. */
+const appManifestName = (version) => `subzer0-app-${version}.json`
 const CHECK_TTL = 10 * 60 * 1000
 const DOWNLOAD_TIMEOUT = 45 * 60 * 1000
 
@@ -81,6 +85,8 @@ async function checkUpdate({ force = false } = {}) {
     const release = await latestRelease()
     const latest = parseVersion(release.tag_name)
     const asset = (release.assets ?? []).find((entry) => entry.name === assetName(latest))
+    const appAsset = (release.assets ?? []).find((entry) => entry.name === appAssetName(latest))
+    const appManifest = (release.assets ?? []).find((entry) => entry.name === appManifestName(latest))
     const result = {
       ok: true,
       current,
@@ -90,6 +96,10 @@ async function checkUpdate({ force = false } = {}) {
       asset: asset ? asset.name : null,
       assetId: asset ? asset.id : null,
       assetSize: asset ? asset.size : null,
+      appAsset: appAsset ? appAsset.name : null,
+      appAssetId: appAsset ? appAsset.id : null,
+      appAssetSize: appAsset ? appAsset.size : null,
+      appManifestId: appManifest ? appManifest.id : null,
     }
     checkCache = { at: Date.now(), result }
     return result
@@ -248,6 +258,13 @@ async function applyUpdate(report = () => {}) {
     applying = false
     return { ok: false, reason: `Already on the newest version (${check.current})` }
   }
+
+  // Fast path: when the Electron runtime and node_modules have not changed, only
+  // the app files (a few hundred KB) are downloaded and written in place.
+  if (await tryIncremental(check, report).catch(() => false)) {
+    return { ok: true }
+  }
+
   if (!check.asset || !check.assetId) {
     applying = false
     return { ok: false, reason: `Release v${check.latest} has no Windows setup asset` }
@@ -274,6 +291,87 @@ async function applyUpdate(report = () => {}) {
   } catch (cause) {
     applying = false
     return { ok: false, reason: explain(cause) }
+  }
+}
+
+/** Read the build metadata the installer drops next to package.json. */
+function installedBuildInfo() {
+  try {
+    const file = path.join(path.dirname(app.getPath('exe')), 'resources', 'app', 'build-info.json')
+    return JSON.parse(fs.readFileSync(file, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+/** Fetch a tiny json asset (the app manifest) straight from the API. */
+async function fetchManifest(assetId) {
+  const token = await githubToken()
+  if (!token) return null
+  const response = await fetch(
+    `https://api.github.com/repos/${REPO}/releases/assets/${assetId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/octet-stream',
+        'User-Agent': 'subzer0-updater',
+      },
+    }
+  )
+  if (!response.ok) return null
+  return response.json()
+}
+
+/**
+ * Overlay just the app files onto the existing install, then relaunch. Returns
+ * true when the incremental path applies; false means a full reinstall is needed.
+ */
+async function tryIncremental(check, report) {
+  if (!app.isPackaged) return false
+  if (!check.appAssetId || !check.appManifestId || !check.appAsset) return false
+
+  const manifest = await fetchManifest(check.appManifestId)
+  if (!manifest) return false
+
+  const current = installedBuildInfo()
+  if (!current) return false
+  // If the Electron runtime or node_modules changed, the small zip can't help.
+  if (manifest.electronVersion && current.electronVersion !== manifest.electronVersion) return false
+  if (manifest.modulesHash && current.modulesHash !== manifest.modulesHash) return false
+
+  const dir = path.join(app.getPath('temp'), `subzer0-app-${check.latest}`)
+  await fsp.mkdir(dir, { recursive: true })
+  const zip = path.join(dir, check.appAsset)
+
+  try {
+    report('downloading 0%')
+    await streamAsset(
+      { assetId: check.appAssetId, assetSize: check.appAssetSize },
+      zip,
+      report
+    )
+    if (check.appAssetSize && (await fileSize(zip)) !== check.appAssetSize) {
+      throw new Error('app download was incomplete')
+    }
+
+    report('Installing — the app will restart…')
+    const appDir = path.join(path.dirname(app.getPath('exe')), 'resources', 'app')
+    await run('tar', ['-xf', zip, '-C', appDir], { windowsHide: true })
+    await fsp.rm(zip, { force: true })
+
+    // Relaunch after this process has fully exited (single-instance lock).
+    const exe = app.getPath('exe')
+    const script = `Start-Sleep -Milliseconds 1500; Start-Process -FilePath '${exe.replace(/'/g, "''")}'`
+    spawn(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
+      { detached: true, stdio: 'ignore' }
+    ).unref()
+    setTimeout(() => app.quit(), 700)
+    return true
+  } catch (cause) {
+    await fsp.rm(zip, { force: true }).catch(() => {})
+    return false
   }
 }
 

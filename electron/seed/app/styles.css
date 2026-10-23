@@ -445,6 +445,26 @@ kbd {
   outline-offset: 2px;
 }
 
+.model-switcher {
+  max-width: 180px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  outline: none;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.model-switcher:hover,
+.model-switcher:focus-visible {
+  color: var(--fg);
+  border-color: color-mix(in srgb, var(--muted) 45%, var(--line));
+}
+
 /* --------------------------------------------------------------------- log */
 
 .log {
@@ -537,6 +557,38 @@ kbd {
   border-radius: var(--radius);
   border-bottom-right-radius: 4px;
   background: var(--surface);
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.msg-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.msg-action {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 10.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.msg-action:hover {
+  color: var(--fg);
+  border-color: var(--line);
+}
+
+.msg-action.redo {
+  display: block;
+  margin: 2px 0 0 auto;
 }
 
 .msg.assistant {
@@ -732,6 +784,30 @@ textarea::placeholder {
 .send:disabled {
   opacity: 0.3;
   cursor: default;
+}
+
+.voice {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.voice:hover {
+  color: var(--fg);
+  border-color: color-mix(in srgb, var(--muted) 45%, var(--line));
+}
+
+.voice.listening {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .meter {

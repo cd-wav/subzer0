@@ -20,8 +20,14 @@ These three files **are** the app the user is looking at. Edits appear instantly
 - When a newer subzer0 release is out, the log shows a quiet notice with an
   "Update" button; pressing it downloads, reinstalls and relaunches.
 - Settings dialog: model (free / OpenCode Go / pay-per-token, grouped and
-  searchable), language, reasoning effort, theme (dark/light), accent colour,
-  density, text size, token counter toggle, token budget.
+  searchable), language, reasoning effort, theme (dark/light/system), accent
+  colour, density, text size, token counter toggle, token budget.
+- Top bar carries a compact model quick-switch (switch model without opening
+  settings) beside the notes toggle.
+- User messages show an "edit" affordance (loads the text back into the
+  composer); the last assistant reply shows "regenerate" (re-sends the prompt).
+- A voice button sits in the composer when the runtime exposes speech
+  recognition; otherwise it stays hidden (no dead UI).
 - Brand mark is the inline SVG slashed zero; never replace it with an emoji or a
   plain coloured square.
 - Render only assistant `text` parts — no reasoning traces or tool logs.

@@ -136,6 +136,14 @@ $env:CONV_DEBUG_PORT="9222"; npm run dev
   by the exiting app, reinstalls in place and relaunches. The user's sandbox
   (app files, settings, sessions) is not part of the payload, so it survives
   updates. Exported standalone apps get stub `updates` methods.
+- Incremental updates: each release also ships a slim `subzer0-app-<v>.zip`
+  (app files only, no Electron runtime or node_modules) plus a
+  `subzer0-app-<v>.json` manifest (`electronVersion`, `modulesHash`, size,
+  sha256). When those match the installed `resources/app/build-info.json`, the
+  updater downloads only the small zip and overlays it in place via `tar`; the
+  full setup exe is only fetched when the Electron runtime or node_modules
+  actually changed. Keep `scripts/build-setup.mjs` writing `build-info.json`
+  and both app assets in sync.
 - The icon is generated from code, not a binary asset. `scripts/build-setup.mjs`
   stamps it (plus version info) onto the setup exe, so the installed
   `subzer0.exe` inherits it.

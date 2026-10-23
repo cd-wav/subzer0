@@ -54,11 +54,14 @@ const el = {
   custom: document.getElementById('custom'),
   updateBtn: document.getElementById('updateBtn'),
   language: document.getElementById('language'),
+  modelSwitcher: document.getElementById('modelSwitcher'),
+  voice: document.getElementById('voice'),
 }
 
 const THEMES = [
   { id: 'dark', nameKey: 'dark', bg: '#000000', line: '#232323', accent: '#c9c9c9' },
   { id: 'light', nameKey: 'light', bg: '#fafafa', line: '#e4e4e4', accent: '#1a1a1a' },
+  { id: 'system', nameKey: 'systemTheme', bg: '#6b6b6b', line: '#9a9a9a', accent: '#6d77ff' },
 ]
 
 const ACCENTS = [
@@ -1430,6 +1433,76 @@ const MESSAGES = {
     uk: 'готово',
     zh: '完成',
   },
+  systemTheme: {
+    en: 'system',
+    ru: 'системная',
+    de: 'system',
+    es: 'sistema',
+    fr: 'système',
+    pt: 'sistema',
+    it: 'sistema',
+    nl: 'systeem',
+    pl: 'system',
+    tr: 'sistem',
+    uk: 'системна',
+    zh: '跟随系统',
+  },
+  edit: {
+    en: 'edit',
+    ru: 'изменить',
+    de: 'bearbeiten',
+    es: 'editar',
+    fr: 'modifier',
+    pt: 'editar',
+    it: 'modifica',
+    nl: 'bewerken',
+    pl: 'edytuj',
+    tr: 'düzenle',
+    uk: 'редагувати',
+    zh: '编辑',
+  },
+  regenerate: {
+    en: 'regenerate',
+    ru: 'перегенерировать',
+    de: 'neu erzeugen',
+    es: 'regenerar',
+    fr: 'régénérer',
+    pt: 'regenerar',
+    it: 'rigenera',
+    nl: 'opnieuw',
+    pl: 'generuj ponownie',
+    tr: 'yeniden üret',
+    uk: 'перегенерувати',
+    zh: '重新生成',
+  },
+  voiceInput: {
+    en: 'voice input',
+    ru: 'голосовой ввод',
+    de: 'spracheingabe',
+    es: 'entrada de voz',
+    fr: 'saisie vocale',
+    pt: 'entrada de voz',
+    it: 'input vocale',
+    nl: 'spraakinvoer',
+    pl: 'wprowadzanie głosowe',
+    tr: 'sesli giriş',
+    uk: 'голосове введення',
+    zh: '语音输入',
+  },
+  listening: {
+    en: 'listening…',
+    ru: 'слушаю…',
+    de: 'höre zu…',
+    es: 'escuchando…',
+    fr: 'écoute…',
+    pt: 'ouvindo…',
+    it: 'ascolto…',
+    nl: 'luister…',
+    pl: 'słucham…',
+    tr: 'dinleniyor…',
+    uk: 'слухаю…',
+    zh: '聆听中…',
+  },
   closeLabel: {
     en: 'close',
     ru: 'закрыть',
@@ -1648,6 +1721,25 @@ let compact = loadCompact()
 applyCompact()
 /** user-written custom instructions, appended to each message. */
 let customInstructions = loadCustom()
+
+/* theme can follow the OS instead of a hard dark/light setting */
+const THEME_MODE_KEY = 'subzer0.theme-mode'
+function loadThemeMode() {
+  try {
+    const value = window.localStorage.getItem(THEME_MODE_KEY)
+    return value === 'system' || value === 'dark' || value === 'light' ? value : null
+  } catch {
+    return null
+  }
+}
+let themeMode = loadThemeMode()
+const darkQuery = window.matchMedia('(prefers-color-scheme: dark)')
+
+function effectiveTheme() {
+  if (themeMode === 'system') return darkQuery.matches ? 'dark' : 'light'
+  if (themeMode === 'dark' || themeMode === 'light') return themeMode
+  return settings.theme
+}
 /** Latest release from window.conv.updates; drives the Update message. */
 let release = null
 let updateBusy = false
@@ -1657,13 +1749,13 @@ let updateNote = ''
 
 function activeAccent() {
   const accent = ACCENTS.find((entry) => entry.id === settings.accent) ?? ACCENTS[0]
-  return settings.theme === 'light' ? accent.light : accent.color
+  return effectiveTheme() === 'light' ? accent.light : accent.color
 }
 
 function applySettings() {
   normalizePersonality()
   const root = document.documentElement
-  root.dataset.theme = settings.theme
+  root.dataset.theme = effectiveTheme()
   root.dataset.density = settings.density
   root.dataset.size = settings.fontSize
   root.style.setProperty('--accent', activeAccent())
@@ -1686,6 +1778,7 @@ function applySettings() {
   el.modelDot.dataset.plan = model?.plan ?? 'free'
 
   renderModels()
+  renderModelSwitcher()
   renderVariants()
   renderPersonality()
   renderThemes()
@@ -2045,6 +2138,40 @@ function renderModels() {
 
 /* ------------------------------------------------------------------ variants */
 
+/** The compact model picker in the topbar; switch model without opening settings. */
+function renderModelSwitcher() {
+  if (!el.modelSwitcher) return
+  const frag = document.createDocumentFragment()
+
+  if (!models.length) {
+    const opt = document.createElement('option')
+    opt.value = `${settings.model.providerID}::${settings.model.id}`
+    opt.textContent = settings.model.id
+    frag.appendChild(opt)
+    el.modelSwitcher.replaceChildren(frag)
+    return
+  }
+
+  for (const group of GROUPS) {
+    const items = models.filter((model) => model.plan === group.plan)
+    if (!items.length) continue
+    const og = document.createElement('optgroup')
+    og.label = t(group.labelKey)
+    for (const model of items) {
+      const opt = document.createElement('option')
+      opt.value = `${model.providerID}::${model.id}`
+      opt.textContent = model.name
+      if (model.id === settings.model.id && model.providerID === settings.model.providerID) {
+        opt.selected = true
+      }
+      og.appendChild(opt)
+    }
+    frag.appendChild(og)
+  }
+
+  el.modelSwitcher.replaceChildren(frag)
+}
+
 function renderVariants() {
   const model = selectedModel()
   const variants = model?.variants ?? []
@@ -2077,7 +2204,7 @@ function renderThemes() {
     const button = document.createElement('button')
     button.type = 'button'
     button.className = 'theme'
-    button.setAttribute('aria-pressed', String(settings.theme === theme.id))
+    button.setAttribute('aria-pressed', String((themeMode ?? settings.theme) === theme.id))
 
     const preview = document.createElement('span')
     preview.className = 'preview'
@@ -2096,7 +2223,23 @@ function renderThemes() {
 
     button.append(preview, label)
     button.addEventListener('click', () => {
-      void save({ theme: theme.id })
+      if (theme.id === 'system') {
+        themeMode = 'system'
+        try {
+          window.localStorage.setItem(THEME_MODE_KEY, 'system')
+        } catch {
+          /* memory-only is fine */
+        }
+        applySettings()
+      } else {
+        themeMode = null
+        try {
+          window.localStorage.removeItem(THEME_MODE_KEY)
+        } catch {
+          /* memory-only is fine */
+        }
+        void save({ theme: theme.id })
+      }
     })
     frag.appendChild(button)
   }
@@ -2257,8 +2400,12 @@ function renderMessages() {
   }
 
   let lastAssistantId = null
+  let lastUserText = ''
   for (const message of shown) {
     if (message.type === 'assistant') lastAssistantId = message.id
+    else if (message.type === 'user') {
+      lastUserText = cleanUserText(message.text ?? message.payload?.text)
+    }
   }
 
   for (const [messageIndex, message] of shown.entries()) {
@@ -2267,7 +2414,20 @@ function renderMessages() {
       if (!text) continue
       const bubble = document.createElement('div')
       bubble.className = 'msg user'
-      bubble.textContent = text
+      const body = document.createElement('span')
+      body.className = 'msg-body'
+      body.textContent = text
+      const edit = document.createElement('button')
+      edit.type = 'button'
+      edit.className = 'msg-action'
+      edit.textContent = t('edit')
+      edit.addEventListener('click', () => {
+        el.input.value = text
+        el.input.focus()
+        autosize()
+        renderCmdMenu()
+      })
+      bubble.append(body, edit)
       el.log.appendChild(bubble)
       continue
     }
@@ -2324,6 +2484,19 @@ function renderMessages() {
     }
 
     for (const text of textParts) renderAssistantText(el.log, text)
+
+    if (message.id === lastAssistantId && lastUserText && !busy) {
+      const redo = document.createElement('button')
+      redo.type = 'button'
+      redo.className = 'msg-action redo'
+      redo.textContent = t('regenerate')
+      redo.addEventListener('click', () => {
+        el.input.value = lastUserText
+        autosize()
+        void submit()
+      })
+      el.log.appendChild(redo)
+    }
   }
 
   if (pending) {
@@ -2717,6 +2890,86 @@ el.send.addEventListener('click', (event) => {
 })
 
 el.updateBtn?.addEventListener('click', () => void applyUpdate())
+
+el.modelSwitcher?.addEventListener('change', () => {
+  const [providerID, id] = el.modelSwitcher.value.split('::')
+  const model = models.find((m) => m.providerID === providerID && m.id === id)
+  if (!model) return
+  const keep =
+    settings.model.variant === 'default' || model.variants.includes(settings.model.variant)
+  void save({
+    model: { providerID: model.providerID, id: model.id, variant: keep ? settings.model.variant : 'default' },
+  })
+})
+
+// Follow the OS light/dark preference live when the "system" theme is chosen.
+if (darkQuery.addEventListener) {
+  darkQuery.addEventListener('change', () => {
+    if (themeMode === 'system') applySettings()
+  })
+}
+
+// Best-effort voice input; the runtime exposes the recognition API only when it
+// is available, otherwise the button stays hidden (no dead UI).
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+const SPEECH_LANGS = {
+  en: 'en-US',
+  ru: 'ru-RU',
+  de: 'de-DE',
+  es: 'es-ES',
+  fr: 'fr-FR',
+  pt: 'pt-PT',
+  it: 'it-IT',
+  nl: 'nl-NL',
+  pl: 'pl-PL',
+  tr: 'tr-TR',
+  uk: 'uk-UA',
+  zh: 'zh-CN',
+}
+if (el.voice && SpeechRecognition) {
+  const recognizer = new SpeechRecognition()
+  recognizer.interimResults = false
+  recognizer.continuous = false
+  let listening = false
+  const stop = () => {
+    listening = false
+    el.voice.classList.remove('listening')
+    el.voice.title = t('voiceInput')
+    el.voice.setAttribute('aria-label', t('voiceInput'))
+  }
+  el.voice.addEventListener('click', () => {
+    if (listening) {
+      try {
+        recognizer.stop()
+      } catch {
+        /* already stopped */
+      }
+      return
+    }
+    listening = true
+    recognizer.lang = SPEECH_LANGS[language] || 'en-US'
+    el.voice.classList.add('listening')
+    el.voice.title = t('listening')
+    el.voice.setAttribute('aria-label', t('listening'))
+    try {
+      recognizer.start()
+    } catch {
+      stop()
+    }
+  })
+  recognizer.onresult = (event) => {
+    const transcript = Array.from(event.results)
+      .map((result) => result[0].transcript)
+      .join(' ')
+    if (transcript) {
+      el.input.value = (el.input.value ? `${el.input.value} ` : '') + transcript
+      autosize()
+    }
+  }
+  recognizer.onend = stop
+  recognizer.onerror = stop
+  el.voice.hidden = false
+}
 
 el.showTokens.addEventListener('change', () => {
   void save({ showTokens: el.showTokens.checked })
