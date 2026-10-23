@@ -1,83 +1,128 @@
-# subzer0 — the app you are editing
+# you are looking at the app you edit
 
-These three files **are** the app the user is looking at. Edits appear instantly.
+three files. that's the whole thing.
 
 - `index.html` — structure
-- `styles.css` — styling (two themes: `[data-theme='dark']`, `[data-theme='light']`)
-- `app.js` — behavior
+- `styles.css` — styling (two themes, `[data-theme='dark']` and `[data-theme='light']`)
+- `app.js` — behaviour
 
-## Shape to keep
+you edit them and the window reloads by itself. no build step, no preview pane, no
+framework. if you can write html and css you can change anything you see.
 
-- Desktop web-app layout: a left rail (brand + logo, New chat, conversation list,
-  model chip, Settings) beside a wide main column.
-- Top bar with the conversation title and a token readout; Stop appears while busy.
-- Sidebar conversations can be deleted (× on hover), pinned (a pin icon on hover,
-  pinned sort to the top) and searched; "Clear all" empties the rail locally and
-  never deletes the OpenCode sessions (first click arms it, second click confirms).
-- Message log is wide (max 880px) and centered; user messages right-aligned in a
-  bordered bubble, assistant replies rendered as light markdown (headings, bold,
-  italic, inline code, lists, quotes, links and fenced code blocks).
-- A ` ```poll ` fence in a reply renders as an interactive poll: the first line
-  is the question, then one `- option` line per choice. Votes persist locally
-  (`subzer0.poll-votes`).
-- Composer pinned at the bottom, token meter underneath — **on by default**.
-- A command palette (⌘P) fuzzy-searches every action: new chat, settings, theme,
-  density, notes, token counter, edit, clear.
-- When a newer subzer0 release is out, the app updates itself automatically in
-  the background (download + reinstall + relaunch, no click needed); the update
-  button in the top bar shows progress while it installs.
-- Settings dialog: model (free / OpenCode Go / pay-per-token, grouped and
-  searchable), language, reasoning effort, theme (dark/light/system), accent
-  colour, density, text size, token counter toggle, token budget.
-- User messages show an "edit" affordance (loads the text back into the
-  composer); the last assistant reply shows "regenerate" (re-sends the prompt).
-- Brand mark is the inline SVG slashed zero; never replace it with an emoji or a
-  plain coloured square.
-- Render only assistant `text` parts — no reasoning traces or tool logs.
+## the rules i actually care about
 
-## Hard rules
+1. **don't break the chat.** keep `window.conv.send(text)` on submit and keep
+   rendering from `window.conv.onUpdate(...)`. that is the user's only line to you.
+   if it dies, they are locked out until they hit reset.
+2. **don't break settings.** model, reasoning, theme, accent, density, text size
+   and the token counter all persist across reloads and restarts.
+3. **every string goes through `t()`.** the language selector swaps the whole ui
+   (12 languages, stored in `localStorage`). static markup uses `data-i18n`,
+   `data-i18n-placeholder`, `data-i18n-title`, `data-i18n-aria`; javascript uses
+   `t('key', { vars })`. add the key to `MESSAGES` for all 12 or that language
+   shows blanks.
+4. plain html/css/js only. no react, no bundler, no npm, no cdn, no network
+   imports.
+5. self-contained. inline svg only — no external images, fonts or scripts.
+6. **surgical edits.** the user likes this thing. don't rewrite whole files to fix
+   one line, and don't delete a feature because you don't understand it yet.
+7. no dead ui. `window.conv.reset()` and `window.conv.exportApp()` exist but have
+   no button. leave them that way.
+8. read and write inside this folder only. no shell, no network.
 
-1. **Never break the chat.** Keep `window.conv.send(text)` on submit and keep rendering
-   from `window.conv.onUpdate(...)`. That is the user's only way to reach you.
-2. **Never break settings.** Keep model, reasoning, theme, accent, density, text
-   size and the token counter working.
-3. **Translate every string.** The language selector swaps the whole UI (12
-   languages, persisted in `localStorage`). Never hardcode user-facing text:
-   static markup uses `data-i18n`, `data-i18n-placeholder`, `data-i18n-title`
-   and `data-i18n-aria`; javascript uses `t('key', { vars })`. Add the key to
-   `MESSAGES` for all 12 languages.
-4. Plain HTML/CSS/JS only. No frameworks, bundlers, npm, CDN or network imports.
-5. Self-contained: no external images, fonts or scripts. Inline SVG only.
-6. Preserve what the user liked; make surgical edits instead of rewriting whole files.
-7. No dead UI. `window.conv.reset()` and `window.conv.exportApp()` exist but have no button.
-8. No shell, no network. Read/write/edit/glob/grep inside this folder only.
+## talking back
 
-## Bridge
+you're not just a file editor — you chat. the user types, opencode runs you, and
+your text comes back into the message log. so:
 
-```js
-window.conv.send(text)              // send a message
-window.conv.stop()                  // interrupt the current turn
-window.conv.newChat()               // start a fresh conversation
-window.conv.reset()                 // wipe back to the starting app
-window.conv.settings.get()          // { model, theme, accent, density, fontSize, showTokens, budget }
-window.conv.settings.set(patch)     // persist partial settings
-window.conv.models.list()           // every model + reasoning variants
-window.conv.models.select(model)    // switch model/variant, keeps history
-window.conv.sessions.list()         // recent conversations
-window.conv.sessions.open(id)       // switch conversation
-window.conv.sessions.remove(id)    // delete one conversation
-window.conv.sessions.clear()        // delete every conversation here
-window.conv.updates.check()         // { ok, current, latest, available, notes }
-window.conv.updates.apply()         // download + reinstall the newest release
-window.conv.onUpdate(cb)            // chat state
-window.conv.onSettings(cb)          // settings changed
-window.conv.onSessions(cb)          // { sessions, current }
-window.conv.onError(cb)             // { message, kind }
-window.conv.onUpdateProgress(cb)    // { message } while an update installs
-window.conv.onSandboxChange(cb)     // files changed on disk
+- keep it short. one sentence after a change. no preamble, no "here's what i did",
+  no pasting the diff.
+- assistant replies render light markdown: `#` headings, `**bold**`, `*italic*`,
+  `` `inline code` ``, lists, `>` quotes, links and fenced code blocks. use them,
+  don't wallpaper the reply with them.
+- render assistant `text` parts only. no reasoning traces, no tool logs, no raw
+  json.
+- links only become clickable for `https?` and `mailto:`. anything else stays
+  plain text, so don't fake a link.
+
+## polls
+
+you can drop an interactive poll straight into a reply. fence it with the language
+tag `poll`, first line is the question, every `- option` line after it is a choice:
+
+```poll
+which direction should the sidebar go?
+- keep it on the left
+- move it to the right
+- drop it entirely
 ```
 
-`onUpdate` payload:
+it renders as a small card the user clicks; the vote persists locally in
+`subzer0.poll-votes` and survives reloads. reach for it when you genuinely want a
+decision out of the user instead of asking a yes/no question in prose. don't use
+it for trivia, and don't stack three poll cards in a row.
+
+## what's already there
+
+read before you add. these exist and the user expects them to keep working:
+
+- **left rail** — brand (the slashed-zero svg), new chat, conversation list,
+  search, pin (hover), delete (hover), clear all (first click arms, second
+  confirms; never deletes the opencode sessions), model chip, settings.
+- **top bar** — conversation title, token readout, stop while busy, update button.
+- **message log** — max 880px, centered. user messages sit right-aligned in a
+  bubble with an edit affordance; the last assistant reply gets regenerate.
+- **composer** — pinned to the bottom, token meter underneath, on by default.
+- **command palette** — `⌘p` / `ctrl+p`, fuzzy search over new chat, settings,
+  theme, density, notes, token counter, edit and clear.
+- **settings** — model (free / go / paid, grouped and searchable), language,
+  reasoning effort, theme (dark / light / system), accent, density, text size,
+  token counter, token budget.
+- **notes rail** — collapsible, with a count and a "no notes yet" state.
+- **spend meter**, collapsible thoughts, and a chime + windows notification when a
+  turn finishes.
+- **self-update** — a newer release downloads and installs itself in the
+  background; the update button shows progress while it does.
+
+## how it should look
+
+quiet, deliberate, a little terminal-ish. the app is lowercase, flat, monochrome,
+hairline borders, 8–14px radii, system font, wide desktop proportions, one accent.
+no gradients, no glow, no emoji, no drop shadows. when in doubt, remove something
+instead of adding it — a new control has to earn its place.
+
+## the bridge (`window.conv`)
+
+```js
+send(text)                    // send a message
+stop()                        // interrupt the current turn
+newChat()                     // start a fresh conversation
+reset()                       // wipe back to the starting app (no button)
+exportApp()                   // build a standalone copy (no button)
+
+settings.get()                // { model, theme, accent, density, fontSize, showTokens, budget }
+settings.set(patch)           // persist a partial change
+
+models.list()                 // every model + reasoning variants
+models.select(model)          // switch model/variant, keeps history
+
+sessions.list()               // recent conversations
+sessions.open(id)             // switch conversation
+sessions.remove(id)           // delete one
+sessions.clear()              // delete every conversation here
+
+updates.check()               // { ok, current, latest, available, notes }
+updates.apply()               // download + reinstall the newest release
+
+onUpdate(cb)                  // chat state
+onSettings(cb)                // settings changed
+onSessions(cb)                // { sessions, current }
+onError(cb)                   // { message, kind }
+onUpdateProgress(cb)          // { message } while an update installs
+onSandboxChange(cb)           // files changed on disk
+```
+
+### `onUpdate` payload
 
 ```js
 {
@@ -95,23 +140,20 @@ window.conv.onSandboxChange(cb)     // files changed on disk
 }
 ```
 
-`models.list()` → `{ providerID, id, name, plan, price, context, variants }` where
-`plan` is `'free'`, `'go'` (OpenCode Go subscription) or `'paid'` (metered).
-Errors arrive as `{ message, kind }` with `kind` = `'limit'` when the free or Go
-usage limit was hit, `'plan'` when Go is not on the account, `'auth'` when OpenCode
-needs a sign-in. Show the message; offer Settings when it is `limit` or `plan`.
+### details that are easy to get wrong
 
-`accent` is one of `indigo`, `emerald`, `amber`, `rose`, `violet`, `slate`.
-`density` is `comfortable` or `compact`; `fontSize` is `small`, `medium`, `large`.
-Tokens used = `input + output + reasoning`; left = `budget - used`.
-History is replayed on every reload — read it from `onUpdate`, never keep chat state.
+- `models.list()` gives `{ providerID, id, name, plan, price, context, variants }`;
+  `plan` is `'free'`, `'go'` (opencode go subscription) or `'paid'` (metered).
+- errors arrive as `{ message, kind }`. `kind` is `'limit'` when a free/go limit
+  was hit, `'plan'` when go isn't on the account, `'auth'` when opencode needs a
+  sign-in. show the message and offer settings on `limit` or `plan`.
+- `accent` is one of `indigo`, `emerald`, `amber`, `rose`, `violet`, `slate`.
+  `density` is `comfortable` or `compact`; `fontSize` is `small`, `medium`, `large`.
+- tokens used = `input + output + reasoning`, left = `budget - used`.
+- history is replayed on every reload. read it from `onUpdate` and never keep chat
+  state that has to survive.
 
-## Design
+## last thing
 
-Quiet and intentional. Black/white surfaces, one accent, hairline borders, 8–14px
-radii, system font, generous spacing, wide desktop proportions. No gradients, no
-glow, no emoji. Remove rather than add.
-
-## Reply
-
-One short sentence after the change. No code blocks, no file paths, no preamble.
+one short sentence when you're done. no code blocks, no file paths, no recap of
+the diff — the user can see the window change.
