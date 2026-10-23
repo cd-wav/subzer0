@@ -13,9 +13,7 @@ opencode go, or metered. it also updates itself in the background.
 
 ## how this was made
 
-ai was used to build this. a lot of it. but not everything — a human made the
-calls, wrote the plumbing, picked the look, and edited the parts that mattered.
-it is not pretending otherwise.
+ai was used to build this. it was difficult fighting it to get the perfect output for you guys <3
 
 ## run
 
