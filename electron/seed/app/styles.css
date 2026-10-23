@@ -381,6 +381,11 @@ kbd {
   font-size: 12.5px;
 }
 
+.title::before {
+  content: '# ';
+  color: var(--accent);
+}
+
 .top-actions {
   display: flex;
   align-items: center;
@@ -730,6 +735,8 @@ textarea {
   background: transparent;
   color: var(--fg);
   font: inherit;
+  caret-color: var(--accent);
+  caret-shape: block;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -1515,6 +1522,11 @@ input[type='number']:focus {
   user-select: none;
 }
 
+.prompt::before {
+  content: '~ ';
+  color: var(--muted);
+}
+
 .send .ic-stop {
   display: none;
 }
@@ -2118,4 +2130,25 @@ select:focus-visible {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ----------------------------------------------------------- terminal chrome */
+
+.statusline {
+  width: min(880px, 100%);
+  margin: 8px auto 0;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.02em;
+}
+
+.notice::before {
+  content: '$ ';
+  color: var(--accent);
 }

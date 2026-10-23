@@ -58,6 +58,7 @@ const el = {
   palette: document.getElementById('palette'),
   paletteInput: document.getElementById('paletteInput'),
   paletteList: document.getElementById('paletteList'),
+  statusline: document.getElementById('statusline'),
 }
 
 const THEMES = [
@@ -1857,6 +1858,16 @@ function applySettings() {
   renderSegments(el.densities, DENSITIES, settings.density, (id) => save({ density: id }))
   renderSegments(el.fontSizes, FONT_SIZES, settings.fontSize, (id) => save({ fontSize: id }))
   renderSessions()
+  renderStatusline()
+}
+
+/** The terminal-style status line under the composer: model + key bindings. */
+function renderStatusline() {
+  if (!el.statusline) return
+  const model = selectedModel()
+  const name = model?.name ?? settings.model.id
+  el.statusline.textContent =
+    `${name} · esc ${t('stop')} · ⌘p ${t('commands')} · ⌘n ${t('newChat')} · ↑ ${t('edit')}`
 }
 
 async function save(patch) {
