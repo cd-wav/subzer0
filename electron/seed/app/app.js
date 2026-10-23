@@ -2640,6 +2640,96 @@ const isQuote = (line) => /^\s*>\s?/.test(line)
 const isBullet = (line) => /^\s*[-*+]\s+/.test(line)
 const isOrdered = (line) => /^\s*\d+[.)]\s+/.test(line)
 
+/* -------------------------------------------------------------- polls */
+
+const POLL_VOTES_KEY = 'subzer0.poll-votes'
+
+function hashString(str) {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) | 0
+  return String(hash)
+}
+
+function loadPollVotes() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(POLL_VOTES_KEY) ?? '{}')
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function persistPollVotes(votes) {
+  try {
+    window.localStorage.setItem(POLL_VOTES_KEY, JSON.stringify(votes))
+  } catch {
+    /* memory-only is fine */
+  }
+}
+
+/**
+ * An interactive poll the model can emit with a ```poll fence: the first line is
+ * the question, each following "- option" line is a choice. Votes persist locally.
+ */
+function renderPoll(container, content) {
+  const lines = content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+  if (lines.length < 2) return
+
+  const question = lines[0]
+  const options = lines
+    .slice(1)
+    .map((line) => line.replace(/^[-*+]\s*/, '').replace(/^\d+[.)]\s*/, ''))
+    .filter(Boolean)
+  if (!options.length) return
+
+  const pollId = hashString(`${question}|${options.join('|')}`)
+  const votes = loadPollVotes()
+  let chosen = votes[pollId]
+  if (typeof chosen !== 'number' || chosen < 0 || chosen >= options.length) chosen = null
+
+  const wrap = document.createElement('div')
+  wrap.className = 'poll'
+
+  const heading = document.createElement('div')
+  heading.className = 'poll-q'
+  heading.textContent = question
+
+  const list = document.createElement('div')
+  list.className = 'poll-opts'
+  options.forEach((option, index) => {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'poll-opt'
+    button.setAttribute('aria-pressed', String(index === chosen))
+
+    const label = document.createElement('span')
+    label.className = 'poll-label'
+    label.textContent = option
+
+    const mark = document.createElement('span')
+    mark.className = 'poll-mark'
+    mark.textContent = index === chosen ? '✓' : ''
+
+    button.append(label, mark)
+    button.addEventListener('click', () => {
+      votes[pollId] = index
+      persistPollVotes(votes)
+      list.querySelectorAll('.poll-opt').forEach((node, i) => {
+        node.classList.toggle('selected', i === index)
+        node.setAttribute('aria-pressed', String(i === index))
+        node.querySelector('.poll-mark').textContent = i === index ? '✓' : ''
+      })
+    })
+    list.appendChild(button)
+  })
+
+  wrap.append(heading, list)
+  container.appendChild(wrap)
+}
+
 /** Block-level markdown: code fences, headings, lists, quotes, rules, paragraphs. */
 function renderMarkdown(container, text) {
   const lines = text.split('\n')
@@ -2649,6 +2739,7 @@ function renderMarkdown(container, text) {
     const trimmed = line.trim()
 
     if (isFence(line)) {
+      const language = line.trim().replace(/^```/, '').trim().toLowerCase()
       const buffer = []
       i++
       while (i < lines.length && !/^\s*```\s*$/.test(lines[i].trim())) {
@@ -2656,7 +2747,9 @@ function renderMarkdown(container, text) {
         i++
       }
       i++ // closing fence
-      addCodeBlock(container, buffer.join('\n'))
+      const content = buffer.join('\n')
+      if (language === 'poll') renderPoll(container, content)
+      else addCodeBlock(container, content)
       continue
     }
 

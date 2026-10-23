@@ -17,6 +17,9 @@ These three files **are** the app the user is looking at. Edits appear instantly
 - Message log is wide (max 880px) and centered; user messages right-aligned in a
   bordered bubble, assistant replies rendered as light markdown (headings, bold,
   italic, inline code, lists, quotes, links and fenced code blocks).
+- A ` ```poll ` fence in a reply renders as an interactive poll: the first line
+  is the question, then one `- option` line per choice. Votes persist locally
+  (`subzer0.poll-votes`).
 - Composer pinned at the bottom, token meter underneath — **on by default**.
 - A command palette (⌘P) fuzzy-searches every action: new chat, settings, theme,
   density, notes, token counter, edit, clear.
