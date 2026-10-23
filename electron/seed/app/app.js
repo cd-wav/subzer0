@@ -58,7 +58,6 @@ const el = {
   palette: document.getElementById('palette'),
   paletteInput: document.getElementById('paletteInput'),
   paletteList: document.getElementById('paletteList'),
-  statusline: document.getElementById('statusline'),
 }
 
 const THEMES = [
@@ -581,62 +580,6 @@ const MESSAGES = {
     tr: 'ne istediğini yaz, {model} burada değiştirsin — düzen, renkler, ne olursa.',
     uk: 'напиши, що хочеш, і {model} змінить усе тут — верстку, кольори, будь-що.',
     zh: '写下你的想法，{model} 会直接在这里改 — 布局、颜色，随便什么。',
-  },
-  examples: {
-    en: 'examples:',
-    ru: 'примеры:',
-    de: 'beispiele:',
-    es: 'ejemplos:',
-    fr: 'exemples :',
-    pt: 'exemplos:',
-    it: 'esempi:',
-    nl: 'voorbeelden:',
-    pl: 'przykłady:',
-    tr: 'örnekler:',
-    uk: 'приклади:',
-    zh: '示例：',
-  },
-  hintSidebar: {
-    en: 'give it a sidebar',
-    ru: 'добавь боковую панель',
-    de: 'gib ihm eine seitenleiste',
-    es: 'añade una barra lateral',
-    fr: 'ajoute une barre latérale',
-    pt: 'adicione uma barra lateral',
-    it: 'aggiungi una barra laterale',
-    nl: 'geef het een zijbalk',
-    pl: 'dodaj panel boczny',
-    tr: 'kenar çubuğu ekle',
-    uk: 'додай бічну панель',
-    zh: '加一个侧边栏',
-  },
-  hintTerminal: {
-    en: 'make it feel like a terminal',
-    ru: 'сделай как терминал',
-    de: 'mach es wie ein terminal',
-    es: 'hazlo como una terminal',
-    fr: 'rends-le comme un terminal',
-    pt: 'deixe como um terminal',
-    it: 'fallo sembrare un terminale',
-    nl: 'maak het als een terminal',
-    pl: 'zrób jak terminal',
-    tr: 'terminal gibi yap',
-    uk: 'зроби як термінал',
-    zh: '让它像终端',
-  },
-  hintNotes: {
-    en: 'add a notes panel',
-    ru: 'добавь панель заметок',
-    de: 'füge ein notizpanel hinzu',
-    es: 'añade un panel de notas',
-    fr: 'ajoute un panneau de notes',
-    pt: 'adicione um painel de notas',
-    it: 'aggiungi un pannello note',
-    nl: 'voeg een notitiepaneel toe',
-    pl: 'dodaj panel notatek',
-    tr: 'not paneli ekle',
-    uk: 'додай панель нотаток',
-    zh: '加一个笔记面板',
   },
   thoughts: {
     en: 'thoughts',
@@ -1562,20 +1505,6 @@ const MESSAGES = {
     uk: 'відкріпити',
     zh: '取消置顶',
   },
-  commands: {
-    en: 'commands',
-    ru: 'команды',
-    de: 'befehle',
-    es: 'comandos',
-    fr: 'commandes',
-    pt: 'comandos',
-    it: 'comandi',
-    nl: 'commando’s',
-    pl: 'komendy',
-    tr: 'komutlar',
-    uk: 'команди',
-    zh: '命令',
-  },
   noMatches: {
     en: 'no matches',
     ru: 'нет совпадений',
@@ -1752,8 +1681,6 @@ function applyCompact() {
   document.documentElement.dataset.compact = compact ? 'on' : 'off'
 }
 
-const HINTS = ['hintSidebar', 'hintTerminal', 'hintNotes']
-
 const DEFAULT_SETTINGS = {
   model: { providerID: 'opencode', id: 'deepseek-v4.1-flash-free', variant: 'default' },
   theme: 'dark',
@@ -1858,16 +1785,6 @@ function applySettings() {
   renderSegments(el.densities, DENSITIES, settings.density, (id) => save({ density: id }))
   renderSegments(el.fontSizes, FONT_SIZES, settings.fontSize, (id) => save({ fontSize: id }))
   renderSessions()
-  renderStatusline()
-}
-
-/** The terminal-style status line under the composer: model + key bindings. */
-function renderStatusline() {
-  if (!el.statusline) return
-  const model = selectedModel()
-  const name = model?.name ?? settings.model.id
-  el.statusline.textContent =
-    `${name} · esc ${t('stop')} · ⌘p ${t('commands')} · ⌘n ${t('newChat')} · ↑ ${t('edit')}`
 }
 
 async function save(patch) {
@@ -2462,46 +2379,7 @@ function intro() {
   const line = document.createElement('p')
   line.textContent = t('introLine', { model: modelName })
 
-  const examplesLabel = document.createElement('div')
-  examplesLabel.className = 'intro-examples'
-  examplesLabel.textContent = t('examples')
-
-  const hints = document.createElement('div')
-  hints.className = 'intro-hints'
-  for (const hintKey of HINTS) {
-    const hint = t(hintKey)
-    const chip = document.createElement('button')
-    chip.type = 'button'
-    chip.className = 'hint'
-    chip.textContent = hint
-    chip.addEventListener('click', () => {
-      el.input.value = hint
-      el.input.focus()
-      autosize()
-    })
-    hints.appendChild(chip)
-  }
-
-  const keys = document.createElement('div')
-  keys.className = 'intro-keys'
-  const shortcuts = [
-    ['⌘P', t('commands')],
-    ['⌘K', t('settingsTitle')],
-    ['⌘N', t('newChat')],
-    ['esc', t('stop')],
-    ['↑', t('edit')],
-    ['/', t('focusComposer')],
-  ]
-  for (const [key, label] of shortcuts) {
-    const row = document.createElement('span')
-    row.className = 'key'
-    const kbd = document.createElement('kbd')
-    kbd.textContent = key
-    row.append(kbd, document.createTextNode(' ' + label))
-    keys.appendChild(row)
-  }
-
-  wrap.append(title, line, examplesLabel, hints, keys)
+  wrap.append(title, line)
   return wrap
 }
 
@@ -2951,25 +2829,21 @@ function paletteActions() {
   entries.push({
     id: 'new',
     label: t('newChat'),
-    hint: '⌘N',
     run: () => window.conv.newChat(),
   })
   entries.push({
     id: 'settings',
     label: t('settingsTitle'),
-    hint: '⌘K',
     run: () => openSheet(),
   })
   entries.push({
     id: 'focus',
     label: t('focusComposer'),
-    hint: '/',
     run: () => el.input.focus(),
   })
   entries.push({
     id: 'edit',
     label: t('edit'),
-    hint: '↑',
     run: () => {
       const text = lastUserMessageText()
       if (text) {
@@ -3074,7 +2948,6 @@ function renderPalette(query) {
     const tail = document.createElement('span')
     tail.className = 'palette-tail'
     if (item.active) tail.textContent = 'on'
-    else if (item.hint) tail.textContent = item.hint
 
     button.append(label, tail)
     button.addEventListener('click', () => {

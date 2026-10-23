@@ -137,13 +137,6 @@ body {
   background: var(--surface-2);
 }
 
-kbd {
-  color: var(--muted);
-  font: inherit;
-  font-size: 10.5px;
-  font-variant-numeric: tabular-nums;
-}
-
 .rail-head {
   display: flex;
   align-items: center;
@@ -497,35 +490,6 @@ kbd {
   max-width: 52ch;
   color: var(--muted);
   font-size: 13.5px;
-}
-
-.intro-hints {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 14px;
-}
-
-.hint {
-  padding: 5px 10px;
-  border: 1px solid var(--line);
-  border-radius: 0;
-  background: var(--surface);
-  color: var(--muted);
-  font-size: 11.5px;
-  cursor: pointer;
-}
-
-.intro-examples {
-  margin-top: 18px;
-  font-weight: 700;
-  color: var(--fg);
-  font-size: 12px;
-}
-
-.hint:hover {
-  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
-  color: var(--fg);
 }
 
 .msg {
@@ -898,7 +862,6 @@ textarea::placeholder {
 .rail-btn:focus,
 .modelchip:focus,
 .stop:focus,
-.hint:focus,
 .swatch:focus {
   outline: none;
 }
@@ -914,7 +877,6 @@ textarea::placeholder {
 .rail-btn:focus-visible,
 .modelchip:focus-visible,
 .stop:focus-visible,
-.hint:focus-visible,
 .swatch:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
   outline-offset: 2px;
@@ -1712,7 +1674,6 @@ input[type='number']:focus {
 .rail-btn,
 .stop,
 .top-btn,
-.hint,
 .msg.user,
 .error,
 .err-action,
@@ -1748,7 +1709,6 @@ input[type='number'],
 .palette-box,
 .palette-item,
 .palette-input,
-.intro-keys kbd,
 .md code.inline {
   border-radius: 0;
 }
@@ -2072,33 +2032,6 @@ textarea {
   padding-right: 44px;
 }
 
-/* ------------------------------------------------------------- intro keys hint */
-
-.intro-keys {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-  margin-top: 26px;
-  color: var(--muted);
-  font-size: 11.5px;
-}
-
-.intro-keys .key {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.intro-keys kbd {
-  padding: 1px 5px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--fg);
-  font: inherit;
-  font-size: 10.5px;
-}
-
 /* --------------------------------------------------------------- polish pass */
 
 ::selection {
@@ -2133,20 +2066,6 @@ select:focus-visible {
 }
 
 /* ----------------------------------------------------------- terminal chrome */
-
-.statusline {
-  width: min(880px, 100%);
-  margin: 8px auto 0;
-  padding-top: 7px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  letter-spacing: 0.02em;
-}
 
 .notice::before {
   content: '$ ';
