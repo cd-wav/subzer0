@@ -362,7 +362,7 @@ function estimateContext(messages) {
   return Math.round(chars / 4)
 }
 
-const COMPACT_AT = 60_000
+const COMPACT_AT = 24_000
 
 /** Summarise the conversation before a prompt when it has grown expensive. */
 async function maybeCompact() {

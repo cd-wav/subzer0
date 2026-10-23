@@ -744,25 +744,30 @@ textarea::placeholder {
 
 .send {
   flex: 0 0 auto;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
-  border: 0;
-  border-radius: 8px;
-  background: var(--fg);
-  color: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
 .send:hover:not(:disabled) {
-  background: var(--accent);
-  color: var(--accent-fg);
+  color: var(--fg);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+}
+
+.send.busy {
+  color: #ff8b8b;
+  border-color: color-mix(in srgb, #ff8b8b 50%, var(--line));
 }
 
 .send:disabled {
-  opacity: 0.3;
+  opacity: 0.35;
   cursor: default;
 }
 
