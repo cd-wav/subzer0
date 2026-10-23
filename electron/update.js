@@ -22,7 +22,7 @@ const path = require('node:path')
 const run = promisify(execFile)
 
 /** Private repo — asset downloads need the gh CLI's credentials. */
-const REPO = 'cd-wav/conv'
+const REPO = 'cd-wav/subzer0'
 /** The raw setup exe published next to the zip; the full-reinstall fallback. */
 const assetName = (version) => `subzer0-Setup-${version}-win-x64.exe`
 /** A tiny zip of just the app (no Electron runtime, no node_modules). */

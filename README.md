@@ -1,80 +1,83 @@
 ﻿# subzer0
 
-An AI app that rewrites itself.
+an open-source ai app that rewrites itself.
 
-You open it and get a quiet, dark, wide chat window with a sidebar. You tell the AI
-what you want — "give me a sidebar with folders", "make it look like a terminal" —
-and it edits the app you are looking at. The window reloads and the change is
-there. Everything about the interface is fair game, because the interface is just
-three files the AI can rewrite.
+you open it and get a quiet, dark, wide chat window with a sidebar. you tell the
+ai what you want — "give me a sidebar", "make it look like a terminal" — and it
+edits the app you are looking at, live. the window reloads and the change is
+there. the whole interface is three plain files, and the ai can rewrite any of
+them. no framework, no build step, no preview pane — the window is the app.
 
-No API keys. No model downloads. It drives [OpenCode](https://opencode.ai), the
-coding agent on your machine, and picks up every model it can see - the free ones,
-your **OpenCode Go** models, and metered models billed to your balance.
-Reasoning effort, theme, accent colour, density and text size are all in
-Settings, and everything persists.
+no api keys. no model downloads. it drives [opencode](https://opencode.ai), the
+coding agent already on your machine, and sees every model opencode can see —
+the free ones, opencode go, and metered models billed to your balance.
 
-When a free model runs out of usage, the app says so - with the reset time and a
-one-click way to pick another model. If OpenCode is closed, subzer0 starts its
-own background service on a free port. Conversations are kept in a sidebar,
-auto-named from their first message, and survive restarts.
+## how this was made
 
-## How it works
+ai was used to build this. a lot of it. but not everything.
+
+a human made the calls: decided what the thing should be, wrote the boring
+plumbing, picked the look, and spent a long time arguing with the ai until it
+stopped doing dumb things. the ai did the heavy lifting — the parts that would
+have taken weeks to hand-write — and the human did the parts where taste and
+judgment mattered. this is not a "look ma, no hands" project, and it is not
+pretending to be one. the ai wrote most of the words and a human edited the ones
+that mattered.
+
+## how it works
 
 ```
-+-- the window is the app -----------------------------------+
-|                                                            |
-|   sandbox/app/{index.html,styles.css,app.js}                |
-|   sidebar + wide chat, settings dialog                      |
-|                                                       (↺)  |  <- reset
-+---------------------------+--------------------------------+
++-- the window is the app ------------------------------+
+|                                                       |
+|   sandbox/app/{index.html,styles.css,app.js}          |
+|   sidebar + wide chat, settings dialog                |
++---------------------------+---------------------------+
                             | window.conv  (preload bridge)
                             v
-                    Electron main process
-                            | HTTP + SSE (localhost, basic auth)
+                    electron main process
+                            | http + sse (localhost, basic auth)
                             v
-                    OpenCode background service
+                    opencode background service
                             | edits real files
                             v
             sandbox/app/*  ->  file change  ->  window reloads
 ```
 
-- The window loads `preview://app/index.html`, served straight from
-  `sandbox/app` by a custom protocol handler. There is no preview pane — the app
-  you see *is* the generated app.
+- the window loads `preview://app/index.html`, served straight from `sandbox/app`
+  by a custom protocol handler. the app you see *is* the generated app.
 - `window.conv` (in `electron/preload.js`) is the only fixed contract: `send`,
-  `stop`, `reset`, `exportApp`, `settings`, `models`, `onUpdate`, `onSettings`,
-  `onError`, `onSandboxChange`.
-- No `Done` button: reset is the only host control. Export still exists as
-  `window.conv.exportApp()` for anyone who wants to wire it up.
-- `sandbox/AGENTS.md` is the brief the agent gets every session. It is kept short
+  `stop`, `newChat`, `settings`, `models`, `sessions`, `updates`, `onUpdate`,
+  `onError`.
+- there is no `done` button and no reset button. the interface is fully
+  customizable — the ai can rewrite every pixel of it.
+- `sandbox/AGENTS.md` is the brief the agent gets every session. it is kept short
   on purpose — it is paid for on every message.
-- Every write triggers a debounced reload. Message history is replayed from the
-  server, so nothing is lost, and the session id is persisted across restarts.
-- When the conversation grows past ~60k tokens it is compacted automatically, so
+- every write triggers a debounced reload. message history is replayed from the
+  server, so nothing is lost, and the session id persists across restarts.
+- when the conversation grows past ~24k tokens it is compacted automatically, so
   the agent does not re-send an enormous prompt every turn.
 
-## Requirements
+## requirements
 
-- Windows, macOS or Linux
-- [OpenCode](https://opencode.ai) installed (Desktop app or the `opencode` CLI)
-- Node.js 20+
+- windows, macos or linux
+- [opencode](https://opencode.ai) installed (desktop app or the `opencode` cli)
+- node.js 20+
 
-The app finds the CLI automatically, including the copy bundled with OpenCode
-Desktop (`%APPDATA%\ai.opencode.desktop\cli\<version>\opencode-cli.exe`). Set
+the app finds the cli automatically, including the copy bundled with opencode
+desktop (`%APPDATA%\ai.opencode.desktop\cli\<version>\opencode-cli.exe`). set
 `OPENCODE_CLI` to override.
 
-## Run
+## run
 
 ```sh
 npm install
 npm run dev
 ```
 
-### If Electron's binary won't download
+### if electron's binary won't download
 
-The runtime comes from GitHub releases, which is slow or blocked on some
-networks. Use a mirror:
+the runtime comes from github releases, which is slow or blocked on some
+networks. use a mirror:
 
 ```powershell
 $env:ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"
@@ -85,79 +88,47 @@ node node_modules\electron\install.js
 ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ node node_modules/electron/install.js
 ```
 
-## Model & settings
+## what it can do
 
-`electron/main.js` pins new sessions to `opencode/deepseek-v4.1-flash-free` and
-falls back to the user's configured default if that model is missing. Settings
-talk to the host through `window.conv`:
+- the whole ui is lowercase, flat, monochrome, terminal-ish, and speaks 12
+  languages from a settings dropdown.
+- assistant replies render as markdown — headings, bold, inline code, lists,
+  quotes, links and fenced code blocks — and a ` ```poll ` fence becomes an
+  interactive poll you can vote on.
+- a command palette (⌘p) fuzzy-searches every action.
+- model, reasoning effort, theme (dark / light / system), accent, density, text
+  size, token counter and token budget all live in settings and persist.
+- switching a model calls opencode's `session.switchModel`, so the conversation
+  history survives.
+- the app updates itself in the background when a newer release lands — it
+  downloads only the changed files, so an update is a couple of seconds.
 
-- **Model** — grouped and searchable: free, OpenCode Go, and pay-per-token, with
-  context size or price
-- **Reasoning** — the model's effort variants (`auto` / `low` / `high` / …)
-- **Theme** — dark or light
-- **Accent** — six colours, applied instantly
-- **Density** — cozy or compact spacing
-- **Text size** — S / M / L
-- **Chat** — token counter (on by default), token budget
-
-Switching a model calls OpenCode's `session.switchModel`, so the conversation
-history survives. Settings are stored in `sandbox/.conv.json` together with the
-session id.
-
-## Build an installer
+## build an installer
 
 ```sh
 npm run setup      # out/setup/subzer0 Setup.exe
 npm run release    # ...plus a distributable zip
-npm run publish:release   # upload the zip as a GitHub release
+npm run publish:release   # upload the zip as a github release
 ```
 
-The setup is a small Electron app, not an NSIS script: it copies its own runtime
+the setup is a small electron app, not an nsis script: it copies its own runtime
 into `%LOCALAPPDATA%\Programs\subzer0`, drops the app payload into
-`resources/app`, creates desktop + Start menu shortcuts, and offers to launch it.
-The wizard shows the install location, per-file progress (name, bytes, speed) and
-a step checklist. It needs no network and no toolchain.
+`resources/app`, and creates desktop + start menu shortcuts. it needs no network
+and no toolchain.
 
-The icon is generated from code (`npm run icon`) into `assets/subzer0.png` and a
-multi-size `.ico`, then stamped onto the setup executable with `resedit`, along
-with product and version information. Standalone builds carry a stub
-`window.conv`, so they still render — they just have no AI attached.
+the icon is generated from code (`npm run icon`) into `assets/subzer0.png` and a
+multi-size `.ico`, then stamped onto the setup executable. standalone builds
+carry a stub `window.conv`, so they still render — they just have no ai attached.
 
-## Verify the AI bridge without the UI
+## verify the ai bridge without the ui
 
 ```sh
 npm run smoke
 ```
 
-Creates a throwaway session, asks the agent to write one file, and fails if the
-file does not appear. Prints the model and token usage it observed.
+creates a throwaway session, asks the agent to write one file, and fails if the
+file does not appear. prints the model and token usage it observed.
 
-## Status
+## license
 
-| Piece | State |
-| --- | --- |
-| Chat drives a local OpenCode session | working |
-| AI edits the app you are looking at | working |
-| Live reload after edits | working |
-| Your messages + assistant messages rendered | working |
-| Settings: model (free / Go / metered) + reasoning, 56 models | working |
-| Dark + light themes, accent, density, text size | working |
-| Token counter (on by default) + budget | working |
-| Conversation sidebar: history, auto-titles, switching | working |
-| Stop button while the agent runs | working |
-| Auto-compaction when the context grows | working |
-| Starts its own OpenCode service when closed | working |
-| Reset control | working |
-| Recovery chat if an edit breaks the bridge | working |
-| Export to `.exe` | `window.conv.exportApp()`, no button |
-| Setup wizard + icon + distributable zip | working |
-
-## Roadmap
-
-1. **Undo** — per-message revert using OpenCode's revert/snapshot support.
-2. **Streaming by delta** — render `session.text.delta` instead of refetching.
-3. **Single-file installer** — wrap the setup folder with NSIS when CI is set up.
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+mit — see [license](LICENSE).

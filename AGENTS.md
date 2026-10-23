@@ -2,8 +2,8 @@
 
 ## Repo
 
-- Name: **subzer0** (the GitHub repo is still `cd-wav/conv`)
-- Remote: https://github.com/cd-wav/conv (private)
+- Name: **subzer0** (the GitHub repo is `cd-wav/subzer0`)
+- Remote: https://github.com/cd-wav/subzer0 (private)
 - Branch: `main` tracks `origin/main`
 - Commit identity: `cd <256783022+cd-wav@users.noreply.github.com>`
 - License: MIT
