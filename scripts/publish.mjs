@@ -16,13 +16,31 @@ const run = promisify(execFile)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 const NOTES = (tag) => [
-  `Windows installer for subzer0 ${tag}.`,
+  `**subzer0 ${tag}** — an ai app that rewrites itself.`,
   '',
-  '- Unzip, run "subzer0 Setup.exe", then launch subzer0 from the Start menu.',
-  '- If OpenCode is not running, the app starts its own background service.',
-  '- No API keys: it uses the free models your local OpenCode already has.',
-  '- Self-update is built in: the app checks GitHub and offers "Update" when a',
-  '  newer release lands (the raw .exe asset is what it downloads).',
+  'open it and you get a quiet, dark chat window. tell the ai what you want — a',
+  'sidebar, a terminal look, purple — and it edits the app you are looking at. the',
+  'window reloads and the change is there. the whole ui is three plain files, and',
+  'the ai can rewrite any of them.',
+  '',
+  'what is inside',
+  '',
+  '- no api keys, no model downloads: it drives your local [opencode](https://opencode.ai)',
+  '  and uses every model it can see — free, opencode go, or metered',
+  '- 12 languages, dark / light / system, markdown replies and interactive polls',
+  '- fast self-updates: only changed files are downloaded, usually a couple of seconds',
+  '- everything is lowercase, flat and monochrome, on purpose',
+  '',
+  'install',
+  '',
+  '1. download `subzer0-Setup-' + tag.replace(/^v/, '') + '-win-x64.zip` and unzip it',
+  '2. run `subzer0 Setup.exe`',
+  '3. launch subzer0 from the start menu',
+  '',
+  'no opencode running? the app starts its own background service. it also',
+  'updates itself when a newer release lands.',
+  '',
+  'built with ai, argued over by a human. see the readme for the honest version.',
 ].join('\n')
 
 async function main() {
