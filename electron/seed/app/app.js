@@ -54,7 +54,6 @@ const el = {
   custom: document.getElementById('custom'),
   updateBtn: document.getElementById('updateBtn'),
   language: document.getElementById('language'),
-  voice: document.getElementById('voice'),
   sessionSearch: document.getElementById('sessionSearch'),
   palette: document.getElementById('palette'),
   paletteInput: document.getElementById('paletteInput'),
@@ -1477,34 +1476,6 @@ const MESSAGES = {
     tr: 'yeniden üret',
     uk: 'перегенерувати',
     zh: '重新生成',
-  },
-  voiceInput: {
-    en: 'voice input',
-    ru: 'голосовой ввод',
-    de: 'spracheingabe',
-    es: 'entrada de voz',
-    fr: 'saisie vocale',
-    pt: 'entrada de voz',
-    it: 'input vocale',
-    nl: 'spraakinvoer',
-    pl: 'wprowadzanie głosowe',
-    tr: 'sesli giriş',
-    uk: 'голосове введення',
-    zh: '语音输入',
-  },
-  listening: {
-    en: 'listening…',
-    ru: 'слушаю…',
-    de: 'höre zu…',
-    es: 'escuchando…',
-    fr: 'écoute…',
-    pt: 'ouvindo…',
-    it: 'ascolto…',
-    nl: 'luister…',
-    pl: 'słucham…',
-    tr: 'dinleniyor…',
-    uk: 'слухаю…',
-    zh: '聆听中…',
   },
   closeLabel: {
     en: 'close',
@@ -3388,68 +3359,6 @@ if (darkQuery.addEventListener) {
   darkQuery.addEventListener('change', () => {
     if (themeMode === 'system') applySettings()
   })
-}
-
-// Best-effort voice input; the runtime exposes the recognition API only when it
-// is available, otherwise the button stays hidden (no dead UI).
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-const SPEECH_LANGS = {
-  en: 'en-US',
-  ru: 'ru-RU',
-  de: 'de-DE',
-  es: 'es-ES',
-  fr: 'fr-FR',
-  pt: 'pt-PT',
-  it: 'it-IT',
-  nl: 'nl-NL',
-  pl: 'pl-PL',
-  tr: 'tr-TR',
-  uk: 'uk-UA',
-  zh: 'zh-CN',
-}
-if (el.voice && SpeechRecognition) {
-  const recognizer = new SpeechRecognition()
-  recognizer.interimResults = false
-  recognizer.continuous = false
-  let listening = false
-  const stop = () => {
-    listening = false
-    el.voice.classList.remove('listening')
-    el.voice.title = t('voiceInput')
-    el.voice.setAttribute('aria-label', t('voiceInput'))
-  }
-  el.voice.addEventListener('click', () => {
-    if (listening) {
-      try {
-        recognizer.stop()
-      } catch {
-        /* already stopped */
-      }
-      return
-    }
-    listening = true
-    recognizer.lang = SPEECH_LANGS[language] || 'en-US'
-    el.voice.classList.add('listening')
-    el.voice.title = t('listening')
-    el.voice.setAttribute('aria-label', t('listening'))
-    try {
-      recognizer.start()
-    } catch {
-      stop()
-    }
-  })
-  recognizer.onresult = (event) => {
-    const transcript = Array.from(event.results)
-      .map((result) => result[0].transcript)
-      .join(' ')
-    if (transcript) {
-      el.input.value = (el.input.value ? `${el.input.value} ` : '') + transcript
-      autosize()
-    }
-  }
-  recognizer.onend = stop
-  recognizer.onerror = stop
-  el.voice.hidden = false
 }
 
 el.showTokens.addEventListener('change', () => {

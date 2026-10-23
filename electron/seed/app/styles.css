@@ -771,30 +771,6 @@ textarea::placeholder {
   cursor: default;
 }
 
-.voice {
-  flex: 0 0 auto;
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-.voice:hover {
-  color: var(--fg);
-  border-color: color-mix(in srgb, var(--muted) 45%, var(--line));
-}
-
-.voice.listening {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
 .meter {
   display: flex;
   flex-direction: column;

@@ -29,8 +29,6 @@ These three files **are** the app the user is looking at. Edits appear instantly
   colour, density, text size, token counter toggle, token budget.
 - User messages show an "edit" affordance (loads the text back into the
   composer); the last assistant reply shows "regenerate" (re-sends the prompt).
-- A voice button sits in the composer when the runtime exposes speech
-  recognition; otherwise it stays hidden (no dead UI).
 - Brand mark is the inline SVG slashed zero; never replace it with an emoji or a
   plain coloured square.
 - Render only assistant `text` parts — no reasoning traces or tool logs.
