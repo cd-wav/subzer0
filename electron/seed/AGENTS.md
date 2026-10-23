@@ -22,8 +22,6 @@ These three files **are** the app the user is looking at. Edits appear instantly
 - Settings dialog: model (free / OpenCode Go / pay-per-token, grouped and
   searchable), language, reasoning effort, theme (dark/light/system), accent
   colour, density, text size, token counter toggle, token budget.
-- Top bar carries a compact model quick-switch (switch model without opening
-  settings) beside the notes toggle.
 - User messages show an "edit" affordance (loads the text back into the
   composer); the last assistant reply shows "regenerate" (re-sends the prompt).
 - A voice button sits in the composer when the runtime exposes speech

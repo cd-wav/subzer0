@@ -445,26 +445,6 @@ kbd {
   outline-offset: 2px;
 }
 
-.model-switcher {
-  max-width: 180px;
-  padding: 4px 8px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-size: 11.5px;
-  outline: none;
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-.model-switcher:hover,
-.model-switcher:focus-visible {
-  color: var(--fg);
-  border-color: color-mix(in srgb, var(--muted) 45%, var(--line));
-}
-
 /* --------------------------------------------------------------------- log */
 
 .log {

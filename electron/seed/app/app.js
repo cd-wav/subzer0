@@ -54,7 +54,6 @@ const el = {
   custom: document.getElementById('custom'),
   updateBtn: document.getElementById('updateBtn'),
   language: document.getElementById('language'),
-  modelSwitcher: document.getElementById('modelSwitcher'),
   voice: document.getElementById('voice'),
 }
 
@@ -1778,7 +1777,6 @@ function applySettings() {
   el.modelDot.dataset.plan = model?.plan ?? 'free'
 
   renderModels()
-  renderModelSwitcher()
   renderVariants()
   renderPersonality()
   renderThemes()
@@ -2137,40 +2135,6 @@ function renderModels() {
 }
 
 /* ------------------------------------------------------------------ variants */
-
-/** The compact model picker in the topbar; switch model without opening settings. */
-function renderModelSwitcher() {
-  if (!el.modelSwitcher) return
-  const frag = document.createDocumentFragment()
-
-  if (!models.length) {
-    const opt = document.createElement('option')
-    opt.value = `${settings.model.providerID}::${settings.model.id}`
-    opt.textContent = settings.model.id
-    frag.appendChild(opt)
-    el.modelSwitcher.replaceChildren(frag)
-    return
-  }
-
-  for (const group of GROUPS) {
-    const items = models.filter((model) => model.plan === group.plan)
-    if (!items.length) continue
-    const og = document.createElement('optgroup')
-    og.label = t(group.labelKey)
-    for (const model of items) {
-      const opt = document.createElement('option')
-      opt.value = `${model.providerID}::${model.id}`
-      opt.textContent = model.name
-      if (model.id === settings.model.id && model.providerID === settings.model.providerID) {
-        opt.selected = true
-      }
-      og.appendChild(opt)
-    }
-    frag.appendChild(og)
-  }
-
-  el.modelSwitcher.replaceChildren(frag)
-}
 
 function renderVariants() {
   const model = selectedModel()
@@ -2890,17 +2854,6 @@ el.send.addEventListener('click', (event) => {
 })
 
 el.updateBtn?.addEventListener('click', () => void applyUpdate())
-
-el.modelSwitcher?.addEventListener('change', () => {
-  const [providerID, id] = el.modelSwitcher.value.split('::')
-  const model = models.find((m) => m.providerID === providerID && m.id === id)
-  if (!model) return
-  const keep =
-    settings.model.variant === 'default' || model.variants.includes(settings.model.variant)
-  void save({
-    model: { providerID: model.providerID, id: model.id, variant: keep ? settings.model.variant : 'default' },
-  })
-})
 
 // Follow the OS light/dark preference live when the "system" theme is chosen.
 if (darkQuery.addEventListener) {
